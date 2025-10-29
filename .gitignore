@@ -1,0 +1,54 @@
+# Rust/Cargo
+/target/
+**/target/
+Cargo.lock
+
+# VS Code
+.vscode/
+
+# By-products
+**/*.rs.bk
+**/*.d
+**/*.rlib
+**/*.rmeta
+**/*.exe
+**/*.dll
+**/*.so
+**/*.dylib
+**/*.a
+**/*.lib
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
+
+# Node/npm (if using frontend)
+node_modules/
+
+# Misc
+.idea/
+*.swp
+*.swo
+
+# Rust Analyzer
+rust-analyzer/
+
+# Coverage
+coverage/
+
+# Other
+*.old
+*.bak
+*.tmp
+
+# Ignore by convention
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.env
+**/.venv
+
+# Ignore test output
+**/test-output/
