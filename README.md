@@ -2,16 +2,14 @@
 
 A Rust monorepo project.
 
-## Project Structure
+## Documentation System
 
-```
-pim/
-├── crates/
-│   └── gateway/     # HTTP API gateway service
-├── Cargo.toml       # Workspace configuration
-├── INSTRUCTIONS.md  # Development guidelines
-└── AGENT.md         # AI agent guidelines
-```
+This project uses a structured documentation architecture to support long-term development.
+
+- **[AGENTS.md](./AGENTS.md)**: **Start here**. The Project Constitution. Contains process rules, planning requirements, and lifecycle management.
+- **[INSTRUCTIONS.md](./INSTRUCTIONS.md)**: Task-level guidance and coding standards.
+- **[/docs/design.md](./docs/design.md)**: Current accepted system architecture.
+- **[/plans/](./plans/)**: Active development plans and roadmaps.
 
 ## Quick Start
 
@@ -25,8 +23,3 @@ cargo run -p gateway
 # Run tests
 cargo test
 ```
-
-## Documentation
-
-- [INSTRUCTIONS.md](./INSTRUCTIONS.md) - Development guidelines
-- [AGENT.md](./AGENT.md) - AI agent guidelines

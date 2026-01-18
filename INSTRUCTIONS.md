@@ -1,53 +1,33 @@
-# PIM Project Instructions
+# Task Instructions
 
-## Project Overview
+**Scope:** This document provides guidance for executing individual coding tasks.
+For process rules, planning, and architectural standards, refer to `AGENTS.md`.
 
-PIM is a Rust monorepo project with multiple crates organized under the `crates/` directory.
+## 1. Interaction Style
+- **Be Concise:** Provide brief explanations unless asked for detail.
+- **Be Explicit:** When suggesting changes, show the file path and the specific code edit.
+- **No Hallucinations:** Do not reference files or code that do not exist without verifying first.
 
-## Project Structure
+## 2. Coding Standards
+(Task-specific rules)
 
-```
-pim/
-├── Cargo.toml              # Workspace root configuration
-├── Cargo.lock              # Dependency lockfile
-├── README.md               # Project overview
-├── INSTRUCTIONS.md         # This file - project instructions
-├── AGENT.md                # AI agent guidelines
-├── .gitignore              # Git ignore rules
-├── crates/                 # All workspace crates
-│   └── gateway/            # HTTP API gateway service
-│       ├── Cargo.toml
-│       └── src/
-│           ├── main.rs     # Entry point (minimal, delegates to router)
-│           ├── lib.rs      # Library exports
-│           ├── config/     # Configuration management
-│           │   ├── mod.rs
-│           │   ├── app_config.rs
-│           │   ├── env.rs
-│           │   └── settings.rs
-│           ├── api/        # API versioning
-│           │   ├── mod.rs
-│           │   └── v1/
-│           │       ├── mod.rs
-│           │       ├── routes.rs
-│           │       ├── dto.rs
-│           │       └── handlers/
-│           │           ├── mod.rs
-│           │           ├── auth.rs
-│           │           └── user.rs
-│           ├── router/     # Route registration
-│           │   ├── mod.rs
-│           │   └── register.rs
-│           ├── errors/     # Error handling
-│           │   ├── mod.rs
-│           │   ├── app_error.rs
-│           │   └── error_response.rs
-│           ├── middlewares/ # HTTP middlewares
-│           │   ├── mod.rs
-│           │   ├── auth.rs
-│           │   └── request_id.rs
-│           ├── services/   # Business logic
-│           │   ├── mod.rs
+- **Language:** Rust (2021 edition or later)
+- **Formatting:** standard `rustfmt`.
+- **Error Handling:** Use `thiserror` for libraries, `anyhow` for applications where appropriate, unless specified otherwise.
+- **Testing:** Unit tests should be co-located with code; integration tests in `tests/` directory.
+
+## 3. Output Formatting
+- **File Edits:** Use strict markdown format for code blocks.
+- **Terminal Commands:** ensure commands are compatible with `zsh` on macOS.
+
+## 4. Response Protocol
+1. **Analyze:** Understand the immediate task.
+2. **Context:** Check `AGENTS.md` to see if a Plan is required.
+3. **Execute:** Perform the code changes.
+4. **Verify:** Ensure no breaking changes were introduced (run tests if applicable).
+
+---
+*Note: This file is for task execution. For project lifecycle, see [AGENTS.md](./AGENTS.md).*
 │           │   └── user_service.rs
 │           └── utils/      # Utility functions
 │               ├── mod.rs
