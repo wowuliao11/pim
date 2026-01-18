@@ -5,7 +5,7 @@ use std::{
 
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    http::header::HeaderValue,
+    http::header::{HeaderName, HeaderValue},
     Error, HttpMessage,
 };
 use futures_util::future::LocalBoxFuture;
@@ -36,12 +36,14 @@ where
 
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(RequestIdMiddleware {
+            header_name: HeaderName::from_static("x-request-id"),
             service: Rc::new(service),
         }))
     }
 }
 
 pub struct RequestIdMiddleware<S> {
+    header_name: HeaderName,
     service: Rc<S>,
 }
 
@@ -58,13 +60,24 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        // Check if request already has an ID (from upstream proxy)
-        let request_id = req
+        // Cache the HeaderName once per middleware instance (not per request)
+        let header_name = self.header_name.clone();
+
+        // Check if request already has an ID (from upstream proxy) and ensure it's safe
+        // to use as an HTTP header value.
+        let (request_id, request_id_value) = req
             .headers()
             .get(REQUEST_ID_HEADER)
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+            .and_then(|s| HeaderValue::from_str(s).ok().map(|hv| (s.to_string(), hv)))
+            .unwrap_or_else(|| {
+                let id = Uuid::new_v4().to_string();
+                // UUID should always be valid as a header value; if something goes wrong,
+                // fall back to an empty header value.
+                let hv =
+                    HeaderValue::from_str(&id).unwrap_or_else(|_| HeaderValue::from_static(""));
+                (id, hv)
+            });
 
         // Store request ID in extensions for handlers to access
         req.extensions_mut()
@@ -76,10 +89,7 @@ where
             let mut res = service.call(req).await?;
 
             // Add request ID to response headers
-            res.headers_mut().insert(
-                actix_web::http::header::HeaderName::from_static("x-request-id"),
-                HeaderValue::from_str(&request_id).unwrap(),
-            );
+            res.headers_mut().insert(header_name, request_id_value);
 
             Ok(res)
         })
