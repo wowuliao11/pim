@@ -1,25 +1,20 @@
 use actix_web::{web, HttpResponse};
 
-use crate::api::v1::dto::{
-    ApiResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse,
-};
+use anyhow::Context;
+
+use crate::api::v1::dto::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
 use crate::config::AppConfig;
-use crate::errors::AppError;
+use crate::errors::{AppError, ValidationError};
 use crate::middlewares::auth::generate_token;
 
 /// POST /api/v1/auth/login
 /// Authenticate user and return JWT token
-pub async fn login(
-    body: web::Json<LoginRequest>,
-    config: web::Data<AppConfig>,
-) -> Result<HttpResponse, AppError> {
+pub async fn login(body: web::Json<LoginRequest>, config: web::Data<AppConfig>) -> Result<HttpResponse, AppError> {
     // TODO: Validate credentials against database
     // This is a placeholder implementation
 
     if body.email.is_empty() || body.password.is_empty() {
-        return Err(AppError::Validation(
-            "Email and password are required".to_string(),
-        ));
+        return Err(ValidationError::MissingCredentials.into());
     }
 
     // Generate JWT token
@@ -29,7 +24,7 @@ pub async fn login(
         config.jwt_secret(),
         config.jwt_expiration_hours(),
     )
-    .map_err(|e| AppError::Internal(anyhow::anyhow!("Failed to generate token: {}", e)))?;
+    .context("Failed to generate token")?;
 
     let response = LoginResponse {
         access_token: token,
@@ -47,19 +42,17 @@ pub async fn register(body: web::Json<RegisterRequest>) -> Result<HttpResponse, 
     // This is a placeholder implementation
 
     if body.email.is_empty() || body.password.is_empty() || body.name.is_empty() {
-        return Err(AppError::Validation("All fields are required".to_string()));
+        return Err(ValidationError::MissingRegistrationFields.into());
     }
 
     // Validate email format
     if !body.email.contains('@') {
-        return Err(AppError::Validation("Invalid email format".to_string()));
+        return Err(ValidationError::InvalidEmail.into());
     }
 
     // Validate password strength
     if body.password.len() < 8 {
-        return Err(AppError::Validation(
-            "Password must be at least 8 characters".to_string(),
-        ));
+        return Err(ValidationError::WeakPassword { min_len: 8 }.into());
     }
 
     let response = RegisterResponse {

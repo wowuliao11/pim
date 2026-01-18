@@ -12,7 +12,7 @@ use futures_util::future::LocalBoxFuture;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
-use crate::errors::AppError;
+use crate::errors::{AppError, AuthError};
 
 /// JWT Claims structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,9 +39,7 @@ pub struct JwtAuth {
 
 impl JwtAuth {
     pub fn new(secret: impl Into<String>) -> Self {
-        Self {
-            secret: secret.into(),
-        }
+        Self { secret: secret.into() }
     }
 }
 
@@ -88,18 +86,12 @@ where
 
         Box::pin(async move {
             // Extract Authorization header
-            let auth_header = req
-                .headers()
-                .get(AUTHORIZATION)
-                .and_then(|v| v.to_str().ok());
+            let auth_header = req.headers().get(AUTHORIZATION).and_then(|v| v.to_str().ok());
 
             let token = match auth_header {
                 Some(header) if header.starts_with("Bearer ") => &header[7..],
                 _ => {
-                    return Err(AppError::Unauthorized(
-                        "Missing or invalid authorization header".to_string(),
-                    )
-                    .into());
+                    return Err(AppError::from(AuthError::MissingOrInvalidAuthorizationHeader).into());
                 }
             };
 
@@ -109,7 +101,7 @@ where
                 &DecodingKey::from_secret(secret.as_bytes()),
                 &Validation::default(),
             )
-            .map_err(|e| AppError::Unauthorized(format!("Invalid token: {}", e)))?;
+            .map_err(|_| AppError::from(AuthError::InvalidToken))?;
 
             // Store authenticated user in request extensions
             req.extensions_mut().insert(AuthenticatedUser {

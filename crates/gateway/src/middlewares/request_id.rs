@@ -74,14 +74,12 @@ where
                 let id = Uuid::new_v4().to_string();
                 // UUID should always be valid as a header value; if something goes wrong,
                 // fall back to an empty header value.
-                let hv =
-                    HeaderValue::from_str(&id).unwrap_or_else(|_| HeaderValue::from_static(""));
+                let hv = HeaderValue::from_str(&id).unwrap_or_else(|_| HeaderValue::from_static(""));
                 (id, hv)
             });
 
         // Store request ID in extensions for handlers to access
-        req.extensions_mut()
-            .insert(RequestIdExt(request_id.clone()));
+        req.extensions_mut().insert(RequestIdExt(request_id.clone()));
 
         let service = self.service.clone();
 

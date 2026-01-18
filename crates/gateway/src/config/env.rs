@@ -21,11 +21,7 @@ pub fn load_settings() -> Result<Settings, ConfigError> {
         .add_source(File::with_name("config/local").required(false))
         // Override with environment variables (prefix: APP_)
         // e.g., APP_APP_HOST, APP_DB_URL, APP_JWT_SECRET
-        .add_source(
-            Environment::with_prefix("APP")
-                .prefix_separator("_")
-                .separator("_"),
-        )
+        .add_source(Environment::with_prefix("APP").prefix_separator("_").separator("_"))
         .build()?
         .try_deserialize()
 }

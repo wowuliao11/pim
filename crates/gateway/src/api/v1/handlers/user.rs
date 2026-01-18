@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse};
 
 use crate::api::v1::dto::{ApiResponse, UserResponse, UsersListResponse};
-use crate::errors::AppError;
+use crate::errors::{AppError, UserError};
 
 /// GET /api/v1/users
 /// List all users (admin only in production)
@@ -41,10 +41,7 @@ pub async fn get_user(path: web::Path<String>) -> Result<HttpResponse, AppError>
     // This is a placeholder implementation
 
     if user_id == "0" {
-        return Err(AppError::NotFound(format!(
-            "User with id {} not found",
-            user_id
-        )));
+        return Err(UserError::NotFound { user_id }.into());
     }
 
     let response = UserResponse {

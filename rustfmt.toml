@@ -1,0 +1,8 @@
+
+# ================================
+# Base width and heuristics
+# ================================
+
+# Maximum line width for formatting. Increasing this can reduce skipped
+# formatting inside long async blocks.
+max_width = 120

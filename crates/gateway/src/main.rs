@@ -1,6 +1,6 @@
 use actix_web::{web, App, HttpServer};
 use gateway::config::load_app_config;
-use gateway::middlewares::RequestId;
+use gateway::middlewares::{RequestId, RequestLogging};
 use gateway::router::configure_routes;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -10,7 +10,7 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "gateway=debug,actix_web=info".into()),
+                .unwrap_or_else(|_| "gateway=info,actix_web=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -19,11 +19,7 @@ async fn main() -> std::io::Result<()> {
     let config = load_app_config();
     let bind_address = config.bind_address();
 
-    tracing::info!(
-        "Starting {} server at http://{}",
-        config.app_name(),
-        bind_address
-    );
+    tracing::info!("Starting {} server at http://{}", config.app_name(), bind_address);
 
     // wrap config in web::Data once (internally Arc), then clone cheaply in closure
     let config_data = web::Data::new(config);
@@ -34,8 +30,8 @@ async fn main() -> std::io::Result<()> {
             // Add shared application state
             .app_data(config_data.clone())
             // Add middlewares
+            .wrap(RequestLogging)
             .wrap(RequestId)
-            .wrap(tracing_actix_web::TracingLogger::default())
             // Configure routes
             .configure(configure_routes)
     })
