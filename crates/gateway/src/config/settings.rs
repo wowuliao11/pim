@@ -1,3 +1,4 @@
+use common::AppEnv;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -12,6 +13,8 @@ pub struct AppSettings {
     pub host: String,
     pub port: u16,
     pub name: String,
+    #[serde(default)]
+    pub env: AppEnv,
 }
 
 impl Default for AppSettings {
@@ -20,6 +23,7 @@ impl Default for AppSettings {
             host: "127.0.0.1".to_string(),
             port: 8080,
             name: "gateway".to_string(),
+            env: AppEnv::default(),
         }
     }
 }

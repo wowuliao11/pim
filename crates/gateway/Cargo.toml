@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# Workspace crates
+common = { path = "../common" }
+
+# External dependencies
 actix-web.workspace = true
 actix-rt.workspace = true
 serde.workspace = true
