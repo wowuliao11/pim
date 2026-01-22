@@ -12,7 +12,7 @@ use futures_util::future::LocalBoxFuture;
 use uuid::Uuid;
 
 /// Request ID header name
-pub const REQUEST_ID_HEADER: &'static str = "X-Request-Id";
+pub const REQUEST_ID_HEADER: &str = "X-Request-Id";
 
 /// Request ID key for extracting from request extensions
 #[derive(Debug, Clone)]

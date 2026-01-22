@@ -1,7 +1,7 @@
 use common::AppEnv;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Settings {
     pub app: AppSettings,
     pub db: DbSettings,
@@ -52,16 +52,6 @@ impl Default for JwtSettings {
         Self {
             secret: "your-secret-key-change-in-production".to_string(),
             expiration_hours: 24,
-        }
-    }
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            app: AppSettings::default(),
-            db: DbSettings::default(),
-            jwt: JwtSettings::default(),
         }
     }
 }
