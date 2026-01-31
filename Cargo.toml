@@ -12,7 +12,6 @@ license = "MIT"
 # HTTP Framework
 actix-web = "4"
 actix-rt = "2"
-tracing-actix-web = "0.7"
 
 # gRPC Framework
 tonic = "0.12"
