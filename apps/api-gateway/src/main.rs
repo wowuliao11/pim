@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpServer};
-use gateway::config::load_app_config;
-use gateway::middlewares::{RequestId, RequestLogging};
-use gateway::router::configure_routes;
+use api_gateway::config::load_app_config;
+use api_gateway::middlewares::{RequestId, RequestLogging};
+use api_gateway::router::configure_routes;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[actix_web::main]
@@ -10,7 +10,7 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "gateway=info,actix_web=info".into()),
+                .unwrap_or_else(|_| "api_gateway=info,actix_web=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

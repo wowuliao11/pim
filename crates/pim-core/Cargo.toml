@@ -1,0 +1,12 @@
+[package]
+name = "core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+anyhow.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+tracing.workspace = true

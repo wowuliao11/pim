@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/wowuliao11/pim/proto/auth/v1;authv1";
+
+// Auth service handles authentication operations
+service AuthService {
+  // Login authenticates a user and returns a JWT token
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Register creates a new user account
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // ValidateToken validates a JWT token and returns the user info
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // RefreshToken generates a new token from a valid token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string token_type = 2;
+  int64 expires_in = 3;
+  string user_id = 4;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+message RegisterResponse {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string created_at = 4;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  repeated string roles = 3;
+}
+
+message RefreshTokenRequest {
+  string token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string token_type = 2;
+  int64 expires_in = 3;
+}

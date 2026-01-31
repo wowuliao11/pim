@@ -1,0 +1,43 @@
+[package]
+name = "auth-service"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "auth-service"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace crates
+rpc-proto = { path = "../../libs/rpc-proto" }
+common = { path = "../../libs/common" }
+
+# gRPC
+tonic.workspace = true
+prost.workspace = true
+
+# Async Runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Security
+jsonwebtoken.workspace = true
+
+# Serialization
+serde.workspace = true
+
+# Error Handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Observability
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Configuration
+config.workspace = true
+dotenvy.workspace = true
+
+# Utilities
+uuid.workspace = true
+chrono.workspace = true

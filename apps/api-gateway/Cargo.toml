@@ -1,11 +1,15 @@
 [package]
-name = "gateway"
+name = "api-gateway"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "api-gateway"
+path = "src/main.rs"
+
 [dependencies]
 # Workspace crates
-common = { path = "../common" }
+common = { path = "../../libs/common" }
 
 # External dependencies
 actix-web.workspace = true

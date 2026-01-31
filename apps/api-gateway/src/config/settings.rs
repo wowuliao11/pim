@@ -22,7 +22,7 @@ impl Default for AppSettings {
         Self {
             host: "127.0.0.1".to_string(),
             port: 8080,
-            name: "gateway".to_string(),
+            name: "api-gateway".to_string(),
             env: AppEnv::default(),
         }
     }
