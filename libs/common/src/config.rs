@@ -42,11 +42,7 @@ where
     // Override with environment variables
     // Using `__` as separator for nested fields (Rust ecosystem convention)
     // e.g., APP__JWT__SECRET for nested jwt.secret field
-    builder = builder.add_source(
-        Environment::with_prefix(prefix)
-            .prefix_separator("_")
-            .separator("__"),
-    );
+    builder = builder.add_source(Environment::with_prefix(prefix).prefix_separator("_").separator("__"));
 
     builder.build()?.try_deserialize()
 }
@@ -82,8 +78,7 @@ mod tests {
     #[test]
     fn test_load_with_nonexistent_files() {
         // Should not fail when config files don't exist (required=false)
-        let settings: TestSettings =
-            load_config("NONEXISTENT_PREFIX", &["config/nonexistent"]).unwrap();
+        let settings: TestSettings = load_config("NONEXISTENT_PREFIX", &["config/nonexistent"]).unwrap();
         assert_eq!(settings.host, "127.0.0.1");
     }
 }

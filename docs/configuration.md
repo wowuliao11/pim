@@ -16,21 +16,21 @@ We use **double underscores (`__`)** as the nesting separator for structured con
 
 ### Examples
 
-| Field Path (nested)  | Environment Variable     | Example Value                    |
-| -------------------- | ------------------------ | -------------------------------- |
-| `app.host`           | `APP__APP__HOST`         | `0.0.0.0`                        |
-| `app.port`           | `APP__APP__PORT`         | `8080`                           |
-| `db.url`             | `APP__DB__URL`           | `postgres://localhost/mydb`      |
-| `jwt.secret`         | `APP__JWT__SECRET`       | `my-secret-key`                  |
-| `jwt_expiration_hours` | `AUTH_SERVICE__JWT_EXPIRATION_HOURS` | `48`               |
+| Field Path (nested)    | Environment Variable                 | Example Value               |
+| ---------------------- | ------------------------------------ | --------------------------- |
+| `app.host`             | `APP__APP__HOST`                     | `0.0.0.0`                   |
+| `app.port`             | `APP__APP__PORT`                     | `8080`                      |
+| `db.url`               | `APP__DB__URL`                       | `postgres://localhost/mydb` |
+| `jwt.secret`           | `APP__JWT__SECRET`                   | `my-secret-key`             |
+| `jwt_expiration_hours` | `AUTH_SERVICE__JWT_EXPIRATION_HOURS` | `48`                        |
 
 ### Service-Specific Prefixes
 
-| Service        | Prefix         | Example                          |
-| -------------- | -------------- | -------------------------------- |
-| api-gateway    | `APP`          | `APP__APP__HOST`                 |
-| auth-service   | `AUTH_SERVICE` | `AUTH_SERVICE__JWT_SECRET`       |
-| user-service   | `USER_SERVICE` | `USER_SERVICE__PORT`             |
+| Service      | Prefix         | Example                    |
+| ------------ | -------------- | -------------------------- |
+| api-gateway  | `APP`          | `APP__APP__HOST`           |
+| auth-service | `AUTH_SERVICE` | `AUTH_SERVICE__JWT_SECRET` |
+| user-service | `USER_SERVICE` | `USER_SERVICE__PORT`       |
 
 ## TOML Configuration Files
 
@@ -122,16 +122,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Breaking Changes
 
 If you previously used:
+
 ```bash
 export AUTH_SERVICE_JWT_SECRET="my-secret"
 ```
 
 You now need:
+
 ```bash
 export AUTH_SERVICE__JWT_SECRET="my-secret"
 ```
 
 For flat (non-nested) fields, the old syntax still works:
+
 ```bash
 export AUTH_SERVICE__HOST="0.0.0.0"  # Recommended
 export AUTH_SERVICE_HOST="0.0.0.0"   # May still work if field is not nested
@@ -163,6 +166,7 @@ export AUTH_SERVICE_HOST="0.0.0.0"   # May still work if field is not nested
 ### Config values not overriding as expected
 
 Priority order:
+
 1. Environment variables (highest)
 2. TOML files (middle)
 3. Default trait (lowest)

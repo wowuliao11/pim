@@ -39,6 +39,7 @@ cargo run -p user-service
 ### Configuration
 
 Services load configuration from:
+
 1. Environment variables (highest priority)
 2. Optional TOML files (`config/*.toml`)
 3. Default values (lowest priority)

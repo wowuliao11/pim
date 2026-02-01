@@ -131,6 +131,7 @@ All services use a **shared configuration loader** from `libs/common` that suppo
   - `user-service`: `USER_SERVICE`
 
 **Examples:**
+
 - `APP__APP__HOST=0.0.0.0` → `app.host`
 - `APP__JWT__SECRET=my-key` → `jwt.secret`
 - `AUTH_SERVICE__JWT_EXPIRATION_HOURS=48` → `jwt_expiration_hours`
