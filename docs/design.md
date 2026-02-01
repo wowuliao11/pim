@@ -112,21 +112,53 @@ Defined in `proto/` directory:
 
 ---
 
-## 5. Configuration
+## 5. Configuration Management
 
-Each service loads configuration from:
+All services use a **shared configuration loader** from `libs/common` that supports TOML files and environment variables.
 
-1. Default values in code
-2. Config files (`config/*.toml`)
-3. Environment variables (highest priority)
+### Configuration Sources (Priority Order)
 
-### Environment Variable Prefixes
+1. **Environment variables** (highest priority)
+2. **TOML configuration files** (optional)
+3. **Default values** from Rust `Default` trait (lowest priority)
 
-| Service      | Prefix          |
-| ------------ | --------------- |
-| api-gateway  | `APP_`          |
-| auth-service | `AUTH_SERVICE_` |
-| user-service | `USER_SERVICE_` |
+### Environment Variable Convention
+
+- **Nesting separator:** `__` (double underscore)
+- **Service-specific prefixes:**
+  - `api-gateway`: `APP`
+  - `auth-service`: `AUTH_SERVICE`
+  - `user-service`: `USER_SERVICE`
+
+**Examples:**
+- `APP__APP__HOST=0.0.0.0` → `app.host`
+- `APP__JWT__SECRET=my-key` → `jwt.secret`
+- `AUTH_SERVICE__JWT_EXPIRATION_HOURS=48` → `jwt_expiration_hours`
+
+### TOML Files
+
+Each service may load optional TOML files from the `config/` directory (relative to repository root):
+
+- `api-gateway`: `config/default.toml`, `config/local.toml`
+- `auth-service`: `config/auth-service.toml`
+- `user-service`: `config/user-service.toml`
+
+**Note:** `.env` files are **NOT** supported. Use environment variables or TOML files directly.
+
+### Implementation
+
+Services define their own `Settings` structs and call `common::config::load_config()`:
+
+```rust
+use common::config::load_config;
+use config::ConfigError;
+
+pub fn load_settings() -> Result<Settings, ConfigError> {
+    load_config("APP", &["config/default", "config/local"])
+}
+```
+
+For detailed usage and migration notes, see [`docs/configuration.md`](./configuration.md).
 
 ---
 

@@ -6,6 +6,8 @@ use rpc_proto::auth::v1::{
 use tonic::{transport::Server, Request, Response, Status};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use common::telemetry;
+
 mod config;
 mod jwt;
 
@@ -147,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "auth_service=info".into()),
+                .unwrap_or_else(|_| "auth_service=info,common=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -156,11 +158,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let settings = load_settings()?;
     let addr = format!("{}:{}", settings.host, settings.port).parse()?;
 
+    // Initialize Prometheus metrics recorder
+    if let Err(err) = telemetry::init("auth-service") {
+        tracing::warn!(error = %err, "failed to initialize metrics");
+    }
+
+    // Start metrics HTTP server (management plane)
+    let metrics_host = settings.host.clone();
+    let metrics_port = settings.metrics_port;
+    tokio::spawn(async move {
+        if let Err(err) = telemetry::serve_metrics_http(&metrics_host, metrics_port).await {
+            tracing::warn!(error = %err, "metrics server stopped");
+        }
+    });
+
     tracing::info!("Starting auth-service on {}", addr);
 
     let auth_service = AuthServiceImpl::new(settings.jwt_secret, settings.jwt_expiration_hours);
 
     Server::builder()
+        .layer(telemetry::GrpcMetricsLayer::default())
         .add_service(AuthServiceServer::new(auth_service))
         .serve(addr)
         .await?;

@@ -1,5 +1,6 @@
 use super::load_settings;
 use super::Settings;
+use config;
 
 /// Application configuration wrapper
 /// Provides convenient methods for accessing configuration values
@@ -35,8 +36,7 @@ impl AppConfig {
 }
 
 /// Load application configuration from environment and config files
-pub fn load_app_config() -> AppConfig {
-    let settings = load_settings().expect("Failed to load configuration");
-
-    AppConfig::new(settings)
+pub fn load_app_config() -> Result<AppConfig, config::ConfigError> {
+    let settings = load_settings()?;
+    Ok(AppConfig::new(settings))
 }

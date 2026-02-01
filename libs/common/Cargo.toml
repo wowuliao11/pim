@@ -10,4 +10,20 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 config.workspace = true
-dotenvy.workspace = true
+tokio.workspace = true
+
+# Metrics facade (Prometheus pull)
+metrics = "0.22"
+metrics-exporter-prometheus = "0.14"
+metrics-process = "1"
+
+# For gRPC Tower layer + lightweight HTTP /metrics server
+bytes = "1"
+http = "1"
+http-body = "1"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+pin-project-lite = "0.2"
+tower = "0.5"
+futures-util.workspace = true
