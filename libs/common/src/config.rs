@@ -12,10 +12,10 @@ use serde::Serialize;
 /// # Examples
 ///
 /// ```no_run
-/// use serde::Deserialize;
+/// use serde::{Deserialize, Serialize};
 /// use common::config::load_config;
 ///
-/// #[derive(Deserialize, Default)]
+/// #[derive(Deserialize,  Serialize, Default)]
 /// struct Settings {
 ///     host: String,
 ///     port: u16,
@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize, Default, PartialEq)]
+    #[derive(Debug, Deserialize, Serialize, PartialEq)]
     struct TestSettings {
         host: String,
         port: u16,
