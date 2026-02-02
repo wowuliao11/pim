@@ -73,8 +73,7 @@ where
             )
             .increment(1);
 
-            metrics::histogram!(METRIC_RPC_DURATION_SECONDS, LABEL_METHOD => method_label.clone())
-                .record(duration);
+            metrics::histogram!(METRIC_RPC_DURATION_SECONDS, LABEL_METHOD => method_label.clone()).record(duration);
 
             if status >= 400 {
                 let kind = if status >= 500 {

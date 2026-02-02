@@ -1,0 +1,31 @@
+# API Gateway Configuration Template
+# Copy this to config.toml and customize for your environment
+
+# ============================================================
+# Common Configuration (shared across all services)
+# ============================================================
+# Application environment: dev, staging, prod, test
+app_env = "dev"
+
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+
+# Optional: Database URL (if the gateway needs direct DB access)
+# database_url = "postgres://user:password@localhost:5432/pim_db"
+
+# ============================================================
+# Service-Specific Configuration
+# ============================================================
+
+[app]
+host = "127.0.0.1"
+port = 8080
+name = "api-gateway"
+
+[db]
+url = "postgres://localhost/pim"
+
+[jwt]
+# IMPORTANT: Change this in production!
+secret = "your-secret-key-change-in-production"
+expiration_hours = 24

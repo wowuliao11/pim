@@ -6,9 +6,10 @@ use std::str::FromStr;
 ///
 /// Determines runtime behavior, logging format, and default log levels.
 /// Load from APP_ENV environment variable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AppEnv {
+    #[default]
     Development,
     Staging,
     Production,
@@ -38,12 +39,6 @@ impl AppEnv {
     /// Check if running in staging
     pub fn is_staging(&self) -> bool {
         matches!(self, Self::Staging)
-    }
-}
-
-impl Default for AppEnv {
-    fn default() -> Self {
-        Self::Development
     }
 }
 

@@ -98,8 +98,7 @@ impl CallCtx {
         )
         .increment(1);
 
-        metrics::histogram!(METRIC_RPC_DURATION_SECONDS, LABEL_METHOD => self.method.clone())
-            .record(duration);
+        metrics::histogram!(METRIC_RPC_DURATION_SECONDS, LABEL_METHOD => self.method.clone()).record(duration);
 
         if grpc_status != "0" {
             let error_kind = classify_grpc_error_kind(grpc_status);
@@ -128,26 +127,21 @@ where
     type Data = B::Data;
     type Error = B::Error;
 
-    fn poll_frame(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+    fn poll_frame(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
 
         match this.inner.poll_frame(cx) {
-            Poll::Ready(Some(Ok(frame))) => {
-                match frame.into_trailers() {
-                    Ok(trailers) => {
-                        let status = trailers
-                            .get("grpc-status")
-                            .and_then(|v| v.to_str().ok())
-                            .unwrap_or("unknown");
-                        this.ctx.record(status);
-                        Poll::Ready(Some(Ok(Frame::trailers(trailers))))
-                    }
-                    Err(frame) => Poll::Ready(Some(Ok(frame))),
+            Poll::Ready(Some(Ok(frame))) => match frame.into_trailers() {
+                Ok(trailers) => {
+                    let status = trailers
+                        .get("grpc-status")
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("unknown");
+                    this.ctx.record(status);
+                    Poll::Ready(Some(Ok(Frame::trailers(trailers))))
                 }
-            }
+                Err(frame) => Poll::Ready(Some(Ok(frame))),
+            },
             other => other,
         }
     }

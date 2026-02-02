@@ -1,7 +1,7 @@
 use rpc_proto::auth::v1::auth_service_server::{AuthService, AuthServiceServer};
 use rpc_proto::auth::v1::{
-    LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest,
-    RegisterResponse, ValidateTokenRequest, ValidateTokenResponse,
+    LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse,
+    ValidateTokenRequest, ValidateTokenResponse,
 };
 use tonic::{transport::Server, Request, Response, Status};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -70,9 +70,7 @@ impl AuthService for AuthServiceImpl {
         }
 
         if req.password.len() < 8 {
-            return Err(Status::invalid_argument(
-                "Password must be at least 8 characters",
-            ));
+            return Err(Status::invalid_argument("Password must be at least 8 characters"));
         }
 
         // TODO: Create user in database
@@ -177,7 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let auth_service = AuthServiceImpl::new(settings.jwt_secret, settings.jwt_expiration_hours);
 
     Server::builder()
-        .layer(telemetry::GrpcMetricsLayer::default())
+        .layer(telemetry::GrpcMetricsLayer)
         .add_service(AuthServiceServer::new(auth_service))
         .serve(addr)
         .await?;

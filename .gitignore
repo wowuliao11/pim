@@ -50,5 +50,9 @@ coverage/
 **/.env
 **/.venv
 
+# Ignore actual config files (keep only .example.toml in git)
+**/config.toml
+apps/*/config.toml
+
 # Ignore test output
 **/test-output/

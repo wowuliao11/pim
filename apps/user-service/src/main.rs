@@ -1,8 +1,7 @@
 use rpc_proto::user::v1::user_service_server::{UserService, UserServiceServer};
 use rpc_proto::user::v1::{
-    DeleteUserRequest, DeleteUserResponse, GetCurrentUserRequest, GetCurrentUserResponse,
-    GetUserRequest, GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest,
-    UpdateUserResponse, User,
+    DeleteUserRequest, DeleteUserResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetUserRequest,
+    GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse, User,
 };
 use tonic::{transport::Server, Request, Response, Status};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -162,7 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_service = UserServiceImpl::new();
 
     Server::builder()
-        .layer(telemetry::GrpcMetricsLayer::default())
+        .layer(telemetry::GrpcMetricsLayer)
         .add_service(UserServiceServer::new(user_service))
         .serve(addr)
         .await?;

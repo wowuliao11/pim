@@ -18,8 +18,8 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     // Load configuration
-    let config = load_app_config()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to load configuration: {}", e)))?;
+    let config =
+        load_app_config().map_err(|e| std::io::Error::other(format!("Failed to load configuration: {}", e)))?;
     let bind_address = config.bind_address();
 
     // Initialize Prometheus metrics recorder

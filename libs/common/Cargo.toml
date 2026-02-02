@@ -3,27 +3,59 @@ name = "common"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+config_mod = ["dep:config"]
+telemetry_prometheus = [
+    "dep:metrics",
+    "dep:metrics-exporter-prometheus",
+    "dep:metrics-process",
+]
+telemetry_grpc = [
+    "telemetry_prometheus",
+    "dep:tower",
+    "dep:pin-project-lite",
+    "dep:bytes",
+    "dep:http",
+    "dep:http-body",
+    "dep:futures-util",
+]
+telemetry_http = [
+    "telemetry_prometheus",
+    "dep:hyper",
+    "dep:hyper-util",
+    "dep:http",
+    "dep:http-body-util",
+    "dep:tokio",
+    "dep:bytes",
+]
+
 [dependencies]
+# Always available (core utilities)
 serde.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-config.workspace = true
-tokio.workspace = true
 
-# Metrics facade (Prometheus pull)
-metrics = "0.22"
-metrics-exporter-prometheus = "0.14"
-metrics-process = "1"
+# Config feature
+config = { workspace = true, optional = true }
 
-# For gRPC Tower layer + lightweight HTTP /metrics server
-bytes = "1"
-http = "1"
-http-body = "1"
-http-body-util = "0.1"
-hyper = { version = "1", features = ["server", "http1"] }
-hyper-util = { version = "0.1", features = ["tokio"] }
-pin-project-lite = "0.2"
-tower = "0.5"
-futures-util.workspace = true
+# Telemetry Prometheus feature
+metrics = { version = "0.22", optional = true }
+metrics-exporter-prometheus = { version = "0.14", optional = true }
+metrics-process = { version = "1", optional = true }
+
+# Telemetry gRPC feature
+bytes = { version = "1", optional = true }
+http = { version = "1", optional = true }
+http-body = { version = "1", optional = true }
+pin-project-lite = { version = "0.2", optional = true }
+tower = { version = "0.5", optional = true }
+
+# Telemetry HTTP feature
+http-body-util = { version = "0.1", optional = true }
+hyper = { version = "1", features = ["server", "http1"], optional = true }
+hyper-util = { version = "0.1", features = ["tokio"], optional = true }
+tokio = { workspace = true, optional = true }
+futures-util = { workspace = true, optional = true }

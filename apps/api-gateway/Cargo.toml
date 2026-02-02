@@ -9,7 +9,11 @@ path = "src/main.rs"
 
 [dependencies]
 # Workspace crates
-common = { path = "../../libs/common" }
+common = { path = "../../libs/common", features = [
+    "config_mod",
+    "telemetry_prometheus",
+    "telemetry_http",
+] }
 
 # External dependencies
 actix-web.workspace = true

@@ -23,11 +23,7 @@ impl JwtManager {
         }
     }
 
-    pub fn generate_token(
-        &self,
-        user_id: &str,
-        roles: Vec<String>,
-    ) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn generate_token(&self, user_id: &str, roles: Vec<String>) -> Result<String, jsonwebtoken::errors::Error> {
         let now = chrono::Utc::now().timestamp();
         let exp = now + (self.expiration_hours * 3600);
 
