@@ -10,10 +10,7 @@ path = "src/main.rs"
 [dependencies]
 # Workspace crates
 infra-config = { path = "../../libs/infra-config" }
-infra-telemetry = { path = "../../libs/infra-telemetry", features = [
-    "prometheus",
-    "http",
-] }
+infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "http"] }
 
 # External dependencies
 actix-web.workspace = true

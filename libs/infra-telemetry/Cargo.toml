@@ -5,29 +5,9 @@ edition.workspace = true
 
 [features]
 default = []
-prometheus = [
-    "dep:metrics",
-    "dep:metrics-exporter-prometheus",
-    "dep:metrics-process",
-]
-grpc = [
-    "prometheus",
-    "dep:tower",
-    "dep:pin-project-lite",
-    "dep:bytes",
-    "dep:http",
-    "dep:http-body",
-    "dep:futures-util",
-]
-http = [
-    "prometheus",
-    "dep:hyper",
-    "dep:hyper-util",
-    "dep:http",
-    "dep:http-body-util",
-    "dep:tokio",
-    "dep:bytes",
-]
+prometheus = ["dep:metrics", "dep:metrics-exporter-prometheus", "dep:metrics-process"]
+grpc = ["prometheus", "dep:tower", "dep:pin-project-lite", "dep:bytes", "dep:http", "dep:http-body", "dep:futures-util"]
+http = ["prometheus", "dep:hyper", "dep:hyper-util", "dep:http", "dep:http-body-util", "dep:tokio", "dep:bytes"]
 
 [dependencies]
 # Always available (core utilities)

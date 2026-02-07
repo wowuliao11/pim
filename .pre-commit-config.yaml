@@ -23,6 +23,14 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: taplo-fmt
+        name: taplo fmt (TOML format)
+        entry: taplo fmt
+        language: system
+        files: \.toml$
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: cargo-clippy
         name: cargo clippy (lint)
         entry: cargo clippy --workspace --all-targets --all-features -- -D warnings

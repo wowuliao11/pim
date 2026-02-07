@@ -1,0 +1,52 @@
+# Taplo Configuration
+# https://taplo.tamasfe.dev/configuration/
+
+# ================================
+# Global formatting rules
+# ================================
+
+[formatting]
+# Align entries vertically (like a table)
+align_entries = false
+
+# Align comments after table headers
+align_comments = true
+
+# Keep arrays compact (single line if possible)
+array_trailing_comma = true
+array_auto_expand = true
+array_auto_collapse = true
+
+# Indent with 2 spaces (match Rust convention)
+indent_tables = false
+indent_entries = false
+
+# Reorder keys alphabetically
+reorder_keys = false
+
+# Maximum line width before wrapping
+column_width = 120
+
+# Inline tables
+inline_table_expand = true
+
+# Trailing comma in arrays/inline tables
+trailing_comma = true
+
+# Allow multi-line strings
+allowed_blank_lines = 1
+
+# ================================
+# Cargo.toml specific rules
+# ================================
+
+[[rule]]
+include = ["**/Cargo.toml"]
+
+[rule.formatting]
+# Keep dependency tables aligned for readability
+reorder_keys = false
+align_entries = false
+
+# Preserve the order of dependencies as they are meaningful
+reorder_arrays = false

@@ -11,11 +11,7 @@ path = "src/main.rs"
 # Workspace crates
 rpc-proto = { path = "../../libs/rpc-proto" }
 infra-config = { path = "../../libs/infra-config" }
-infra-telemetry = { path = "../../libs/infra-telemetry", features = [
-    "prometheus",
-    "grpc",
-    "http",
-] }
+infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "grpc", "http"] }
 
 # gRPC
 tonic.workspace = true
