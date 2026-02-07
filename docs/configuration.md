@@ -2,16 +2,16 @@
 
 ## Overview
 
-All services in this monorepo use a shared configuration loading mechanism provided by `libs/common`. The configuration system follows a **composition pattern** where:
+All services in this monorepo use a shared configuration loading mechanism provided by `libs/infra-config`. The configuration system follows a **composition pattern** where:
 
-- **`libs/common`** provides reusable loading logic (`load_config`) and common configuration fields (`CommonConfig`)
+- **`libs/infra-config`** provides reusable loading logic (`load_config`) and common configuration fields (`CommonConfig`)
 - **Each service** defines its own `Settings` struct and includes common fields via `#[serde(flatten)]`
 - **`config.toml`** files live in each service's directory (not tracked in git)
 - **`config.example.toml`** templates are tracked in git for reference
 
 ## Configuration Architecture
 
-### Common Configuration (`libs/common`)
+### Common Configuration (`libs/infra-config`)
 
 The `CommonConfig` struct contains fields shared across all services:
 
@@ -28,7 +28,7 @@ pub struct CommonConfig {
 Each service defines its own `Settings` struct and flattens the common config:
 
 ```rust
-use common::config::{load_config, CommonConfig};
+use infra_config::{load_config, CommonConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -133,7 +133,7 @@ jwt_expiration_hours = 24
 ### Step 1: Define Settings Struct with Flattened Common Config
 
 ```rust
-use common::config::{load_config, CommonConfig};
+use infra_config::{load_config, CommonConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -166,8 +166,6 @@ pub fn load_settings() -> Result<Settings, ConfigError> {
 }
 ```
 
-}
-
 ````
 
 ### Step 3: Use in Main
@@ -184,14 +182,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ````
 
-## libs/common Feature Flags
+## libs/infra-config and libs/infra-telemetry
 
-The `common` library now uses feature flags to enable optional functionality:
+The library layer is now split into atomic crates:
 
-- `config_mod`: Configuration loading support (requires `config` and `serde` crates)
-- `telemetry_prometheus`: Prometheus metrics exporter and core telemetry
-- `telemetry_grpc`: gRPC metrics layer (requires `telemetry_prometheus`)
-- `telemetry_http`: HTTP metrics endpoint server (requires `telemetry_prometheus`)
+### `libs/infra-config`
+
+Provides configuration loading utilities:
+
+- `load_config(prefix, config_path)` - Load configuration from TOML + env vars
+- `CommonConfig` - Shared configuration fields across services
+- `AppEnv` - Runtime environment detection enum
+
+### `libs/infra-telemetry`
+
+Provides metrics and observability primitives with feature flags:
+
+- `prometheus`: Prometheus metrics exporter and core telemetry
+- `grpc`: gRPC metrics layer (requires `prometheus`)
+- `http`: HTTP metrics endpoint server (requires `prometheus`)
 
 ### Enabling Features in Your Service
 
@@ -199,7 +208,8 @@ Add features to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-common = { path = "../../libs/common", features = ["config_mod", "telemetry_prometheus", "telemetry_grpc"] }
+infra-config = { path = "../../libs/infra-config" }
+infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "grpc", "http"] }
 ```
 
 **Note**: By default, no features are enabled (`default = []`). Services must explicitly opt-in.

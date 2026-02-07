@@ -6,7 +6,7 @@ use rpc_proto::auth::v1::{
 use tonic::{transport::Server, Request, Response, Status};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use common::telemetry;
+use infra_telemetry as telemetry;
 
 mod config;
 mod jwt;

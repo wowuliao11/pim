@@ -1,5 +1,5 @@
 [workspace]
-members = ["libs/*", "apps/*"]
+members = ["libs/rpc-proto", "libs/infra-config", "libs/infra-telemetry", "apps/*"]
 resolver = "2"
 
 [workspace.package]

@@ -10,10 +10,11 @@ path = "src/main.rs"
 [dependencies]
 # Workspace crates
 rpc-proto = { path = "../../libs/rpc-proto" }
-common = { path = "../../libs/common", features = [
-    "config_mod",
-    "telemetry_prometheus",
-    "telemetry_grpc",
+infra-config = { path = "../../libs/infra-config" }
+infra-telemetry = { path = "../../libs/infra-telemetry", features = [
+    "prometheus",
+    "grpc",
+    "http",
 ] }
 
 # gRPC

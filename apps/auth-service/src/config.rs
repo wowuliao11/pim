@@ -1,5 +1,5 @@
-use common::config::{load_config, CommonConfig};
 use config::ConfigError;
+use infra_config::{load_config, CommonConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]

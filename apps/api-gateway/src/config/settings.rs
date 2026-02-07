@@ -1,4 +1,4 @@
-use common::config::CommonConfig;
+use infra_config::CommonConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]

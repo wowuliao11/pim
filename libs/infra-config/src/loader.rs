@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// ```no_run
 /// use serde::{Deserialize, Serialize};
-/// use common::config::CommonConfig;
+/// use infra_config::CommonConfig;
 ///
 /// #[derive(Debug, Deserialize, Serialize)]
 /// struct AppConfig {
@@ -69,7 +69,7 @@ impl Default for CommonConfig {
 ///
 /// ```no_run
 /// use serde::{Deserialize, Serialize};
-/// use common::config::{load_config, CommonConfig};
+/// use infra_config::{load_config, CommonConfig};
 ///
 /// #[derive(Debug, Deserialize, Serialize, Default)]
 /// struct AppConfig {

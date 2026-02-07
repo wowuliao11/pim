@@ -1,4 +1,4 @@
-use crate::telemetry;
+use crate as telemetry;
 use anyhow::Context;
 use bytes::Bytes;
 use http_body_util::Full;

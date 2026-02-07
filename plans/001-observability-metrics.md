@@ -56,28 +56,31 @@ Explicitly forbidden labels: user identifiers, emails, tokens, request IDs, or a
 
 ## 4) Phased implementation
 
-### Phase 1 — Infrastructure (libs/common)
+### Phase 1 — Infrastructure (libs/infra-telemetry)
 
 Goal: Provide a single reusable telemetry facade for all apps.
 
-- [ ] Add dependencies to `libs/common/Cargo.toml`:
+- [x] Add dependencies to `libs/infra-telemetry/Cargo.toml`:
   - `metrics`
   - `metrics-exporter-prometheus`
   - `metrics-process`
-- [ ] Add module `common::telemetry`:
+- [x] Add module `infra_telemetry`:
   - Files:
-    - `libs/common/src/telemetry/mod.rs`
-    - `libs/common/src/telemetry/labels.rs`
+    - `libs/infra-telemetry/src/lib.rs`
+    - `libs/infra-telemetry/src/labels.rs`
+    - `libs/infra-telemetry/src/grpc_metrics.rs`
+    - `libs/infra-telemetry/src/metrics_http.rs`
   - APIs:
-    - `telemetry::init(service_name: &str) -> anyhow::Result<()>`
-    - `telemetry::render() -> String` (Prometheus text)
-    - `telemetry::fixed_buckets()` (internal)
-- [ ] Export from `libs/common/src/lib.rs`.
+    - `infra_telemetry::init(service_name: &str) -> anyhow::Result<()>`
+    - `infra_telemetry::render() -> String` (Prometheus text)
+    - `infra_telemetry::GrpcMetricsLayer` (Tower layer)
+    - `infra_telemetry::serve_metrics_http(host, port)` (HTTP metrics server)
+- [x] Feature flags: `prometheus`, `grpc`, `http`
 
 Acceptance:
 
-- Calling `common::telemetry::init("test")` once installs a global recorder.
-- `common::telemetry::render()` returns non-empty Prometheus output.
+- Calling `infra_telemetry::init("test")` once installs a global recorder.
+- `infra_telemetry::render()` returns non-empty Prometheus output.
 
 ### Phase 2 — Application integration (apps/\*)
 
@@ -85,9 +88,9 @@ Goal: Expose `/metrics` everywhere with minimal app changes.
 
 #### API Gateway (apps/api-gateway)
 
-- [ ] Call `common::telemetry::init("api-gateway")` at startup.
-- [ ] Add/enable HTTP metrics middleware.
-- [ ] Expose `GET /metrics` returning `common::telemetry::render()`.
+- [x] Call `infra_telemetry::init("api-gateway")` at startup.
+- [x] Add/enable HTTP metrics middleware.
+- [x] Expose `GET /metrics` returning `infra_telemetry::render()`.
 
 Acceptance:
 
@@ -95,9 +98,9 @@ Acceptance:
 
 #### gRPC services (apps/auth-service, apps/user-service)
 
-- [ ] Call `common::telemetry::init("auth-service")` / `init("user-service")`.
-- [ ] Wrap Tonic server with a `GrpcMetricsLayer`.
-- [ ] Spawn an HTTP server for `/metrics` on `*_METRICS_PORT`.
+- [x] Call `infra_telemetry::init("auth-service")` / `init("user-service")`.
+- [x] Wrap Tonic server with a `GrpcMetricsLayer`.
+- [x] Spawn an HTTP server for `/metrics` on `*_METRICS_PORT`.
 
 Acceptance:
 

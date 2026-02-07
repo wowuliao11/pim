@@ -44,19 +44,21 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 
 ### Layer Responsibilities
 
-| Layer          | Crate              | Purpose                     |
-| -------------- | ------------------ | --------------------------- |
-| Contract       | `proto/`           | Protobuf definitions (SSoT) |
-| Boundary       | `libs/rpc-proto`   | Generated gRPC code only    |
-| Infrastructure | `libs/common`      | Cross-cutting utilities     |
-| Gateway        | `apps/api-gateway` | HTTP↔gRPC translation       |
-| Domain         | `apps/*-service`   | Business logic per domain   |
+| Layer          | Crate                | Purpose                      |
+| -------------- | -------------------- | ---------------------------- |
+| Contract       | `proto/`             | Protobuf definitions (SSoT)  |
+| Boundary       | `libs/rpc-proto`     | Generated gRPC code only     |
+| Configuration  | `libs/infra-config`    | Config loading & environment |
+| Observability  | `libs/infra-telemetry` | Metrics, tracing primitives  |
+| Gateway        | `apps/api-gateway`   | HTTP↔gRPC translation        |
+| Domain         | `apps/*-service`     | Business logic per domain    |
 
 ### Dependency Direction
 
 ```
 apps/* → libs/rpc-proto → proto/
-apps/* → libs/common
+apps/* → libs/infra-config
+apps/* → libs/infra-telemetry
 ```
 
 Reverse dependencies are **FORBIDDEN**.
@@ -114,7 +116,7 @@ Defined in `proto/` directory:
 
 ## 5. Configuration Management
 
-All services use a **shared configuration loader** from `libs/common` that supports TOML files and environment variables.
+All services use a **shared configuration loader** from `libs/infra-config` that supports TOML files and environment variables.
 
 ### Configuration Sources (Priority Order)
 
@@ -148,14 +150,14 @@ Each service may load optional TOML files from the `config/` directory (relative
 
 ### Implementation
 
-Services define their own `Settings` structs and call `common::config::load_config()`:
+Services define their own `Settings` structs and call `infra_config::load_config()`:
 
 ```rust
-use common::config::load_config;
+use infra_config::load_config;
 use config::ConfigError;
 
 pub fn load_settings() -> Result<Settings, ConfigError> {
-    load_config("APP", &["config/default", "config/local"])
+    load_config("APP", "config.toml")
 }
 ```
 

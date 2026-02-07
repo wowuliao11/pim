@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse};
 
-use common::telemetry;
+use infra_telemetry as telemetry;
 
 use crate::api;
 

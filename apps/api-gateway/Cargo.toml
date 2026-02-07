@@ -9,10 +9,10 @@ path = "src/main.rs"
 
 [dependencies]
 # Workspace crates
-common = { path = "../../libs/common", features = [
-    "config_mod",
-    "telemetry_prometheus",
-    "telemetry_http",
+infra-config = { path = "../../libs/infra-config" }
+infra-telemetry = { path = "../../libs/infra-telemetry", features = [
+    "prometheus",
+    "http",
 ] }
 
 # External dependencies

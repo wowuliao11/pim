@@ -10,9 +10,10 @@ pim/
 │   ├── auth/v1/               # Auth domain gRPC definitions
 │   └── user/v1/               # User domain gRPC definitions
 │
-├── libs/                      # Library Layer (Reusable crates)
+├── libs/                      # Library Layer (Atomic, Reusable crates)
 │   ├── rpc-proto/             # Boundary Layer - Generated gRPC code only
-│   └── common/                # Infrastructure Layer - Cross-cutting concerns
+│   ├── infra-config/          # Configuration loading & environment utilities
+│   └── infra-telemetry/       # Metrics, tracing, observability primitives
 │
 ├── apps/                      # Application Layer (Deployable binaries)
 │   ├── api-gateway/           # HTTP Gateway (Actix-web)
@@ -48,23 +49,40 @@ pim/
 - ❌ Helpers / mappers / validators
 - ❌ Any non-generated code beyond re-exports
 
-### 3. `libs/common/` - Infrastructure Layer
+### 3. `libs/infra-config/` - Configuration Layer
 
-**Purpose:** Cross-cutting, business-agnostic utilities.
+**Purpose:** Provide generic configuration loading and environment detection.
 
 **Allowed:**
 
-- Error types (thiserror / anyhow)
-- Configuration loading
-- Tracing / logging setup
-- Environment utilities
+- `load_config()` function for loading TOML + env vars
+- `CommonConfig` struct for shared config fields
+- `AppEnv` enum for runtime environment detection
 
 **FORBIDDEN:**
 
-- ❌ Domain models (User, Order, etc.)
-- ❌ Dependencies on specific services
+- ❌ Business logic
+- ❌ Domain-specific configuration structs
+- ❌ Service-specific dependencies
 
-### 4. `apps/api-gateway/` - HTTP Gateway
+### 4. `libs/infra-telemetry/` - Observability Layer
+
+**Purpose:** Provide metrics, tracing, and observability primitives.
+
+**Allowed:**
+
+- Prometheus metrics initialization and rendering
+- gRPC metrics middleware (Tower layer)
+- HTTP metrics endpoint server
+- Standard metric labels and names
+
+**FORBIDDEN:**
+
+- ❌ Business logic
+- ❌ Domain-specific metrics definitions
+- ❌ Service-specific dependencies
+
+### 5. `apps/api-gateway/` - HTTP Gateway
 
 **Purpose:** External HTTP API entry point.
 
@@ -80,7 +98,7 @@ pim/
 - ❌ Core business logic
 - ❌ Direct database access (delegate to gRPC services)
 
-### 5. `apps/*-service/` - Domain Services
+### 6. `apps/*-service/` - Domain Services
 
 **Purpose:** Implement business logic for specific domains.
 
@@ -95,7 +113,8 @@ pim/
 
 ```
 apps/*        ───▶ libs/rpc-proto
-apps/*        ───▶ libs/common
+apps/*        ───▶ libs/infra-config
+apps/*        ───▶ libs/infra-telemetry
 libs/*        ───▶ proto/
 ```
 
@@ -106,7 +125,7 @@ libs/*        ───▶ proto/
 1. **Proto is contract, not implementation**
 2. **rpc-proto only describes boundaries, no behavior**
 3. **Gateway doesn't write business logic, services don't handle HTTP**
-4. **common only contains cross-domain capabilities**
+4. **libs remain atomic: infra-config for config, infra-telemetry for metrics**
 5. **Every app must be independently startable and deployable**
 
 ## Port Allocation

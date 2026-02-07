@@ -1,6 +1,6 @@
 use super::Settings;
-use common::config::load_config;
 use config::ConfigError;
+use infra_config::load_config;
 
 /// Load settings from configuration file and environment variables
 /// Priority (highest to lowest):

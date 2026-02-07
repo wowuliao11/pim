@@ -2,7 +2,7 @@ use actix_web::{web, App, HttpServer};
 use api_gateway::config::load_app_config;
 use api_gateway::middlewares::{HttpMetrics, RequestId, RequestLogging};
 use api_gateway::router::configure_routes;
-use common::telemetry;
+use infra_telemetry as telemetry;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
