@@ -1,4 +1,4 @@
-use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::Error;
 use futures_util::future::{ready, LocalBoxFuture, Ready};
 use infra_telemetry::{
@@ -6,7 +6,6 @@ use infra_telemetry::{
     METRIC_RPC_DURATION_SECONDS, METRIC_RPC_ERRORS_TOTAL, METRIC_RPC_REQUESTS_TOTAL,
 };
 use std::rc::Rc;
-use std::task::{Context, Poll};
 use std::time::Instant;
 
 pub struct HttpMetrics;
@@ -44,9 +43,7 @@ where
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
+    forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let started = Instant::now();

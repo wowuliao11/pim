@@ -15,6 +15,7 @@ pub struct Settings {
 pub struct AppSettings {
     pub host: String,
     pub port: u16,
+    pub metrics_port: u16,
     pub name: String,
 }
 
@@ -23,7 +24,8 @@ impl Default for AppSettings {
         Self {
             host: "127.0.0.1".to_string(),
             port: 8080,
-            name: "api-gateway".to_string(),
+            metrics_port: 60080,
+            name: env!("CARGO_PKG_NAME").to_string(),
         }
     }
 }

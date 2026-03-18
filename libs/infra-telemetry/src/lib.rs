@@ -28,24 +28,71 @@ pub use metrics_http::*;
 #[cfg(feature = "prometheus")]
 use anyhow::Context;
 #[cfg(feature = "prometheus")]
-use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
+pub use metrics_exporter_prometheus::PrometheusHandle;
 #[cfg(feature = "prometheus")]
-use std::sync::OnceLock;
+use metrics_exporter_prometheus::{Matcher, PrometheusBuilder};
 
-#[cfg(feature = "prometheus")]
-static PROMETHEUS: OnceLock<PrometheusHandle> = OnceLock::new();
-
-/// Initialize the Prometheus metrics exporter
+/// Options for configuring the Prometheus metrics exporter.
 ///
-/// This is idempotent - calling it multiple times is safe.
+/// Use the builder methods to customize labels, env, and other settings.
+///
+/// # Example
+///
+/// ```no_run
+/// use infra_telemetry::PrometheusOptions;
+///
+/// let options = PrometheusOptions::new("my-service")
+///     .env("production")
+///     .label("region", "us-east-1");
+/// ```
+#[cfg(feature = "prometheus")]
+pub struct PrometheusOptions {
+    pub service_name: String,
+    pub env: Option<String>,
+    pub global_labels: Vec<(String, String)>,
+}
+
+#[cfg(feature = "prometheus")]
+impl PrometheusOptions {
+    /// Create new options with the given service name.
+    pub fn new(service_name: impl Into<String>) -> Self {
+        Self {
+            service_name: service_name.into(),
+            env: None,
+            global_labels: Vec::new(),
+        }
+    }
+
+    /// Set the environment label (e.g., "dev", "staging", "prod").
+    pub fn env(mut self, env: impl Into<String>) -> Self {
+        self.env = Some(env.into());
+        self
+    }
+
+    /// Add a custom global label to all metrics.
+    pub fn label(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.global_labels.push((key.into(), value.into()));
+        self
+    }
+}
+
+/// Install the Prometheus metrics recorder and return a handle for rendering.
+///
+/// The caller owns the returned [`PrometheusHandle`] and is responsible for
+/// passing it to [`serve_metrics_http()`] or calling `handle.render()` directly.
+///
+/// Unlike the previous `init()`, this function does **not** read environment
+/// variables — the caller is expected to provide all configuration via
+/// [`PrometheusOptions`] (typically sourced from `infra-config`).
+///
+/// # Errors
+///
+/// Returns an error if the Prometheus recorder cannot be installed
+/// (e.g., if another global recorder is already registered in the process).
 ///
 /// Requires `prometheus` feature.
 #[cfg(feature = "prometheus")]
-pub fn init(service_name: &str) -> anyhow::Result<()> {
-    if PROMETHEUS.get().is_some() {
-        return Ok(());
-    }
-
+pub fn install_prometheus(options: PrometheusOptions) -> anyhow::Result<PrometheusHandle> {
     let mut builder = PrometheusBuilder::new();
 
     builder = builder
@@ -55,27 +102,19 @@ pub fn init(service_name: &str) -> anyhow::Result<()> {
         )
         .context("configure fixed buckets for rpc_duration_seconds")?;
 
-    builder = builder.add_global_label(LABEL_SERVICE, service_name.to_string());
+    builder = builder.add_global_label(LABEL_SERVICE, options.service_name);
 
-    if let Ok(env) = std::env::var("APP_ENV") {
+    if let Some(env) = options.env {
         builder = builder.add_global_label(LABEL_ENV, env);
+    }
+
+    for (key, value) in options.global_labels {
+        builder = builder.add_global_label(key, value);
     }
 
     let handle = builder
         .install_recorder()
         .context("install Prometheus metrics recorder")?;
 
-    let _ = PROMETHEUS.set(handle);
-
-    Ok(())
-}
-
-/// Render current metrics in Prometheus text exposition format
-///
-/// Returns empty string if metrics haven't been initialized.
-///
-/// Requires `prometheus` feature.
-#[cfg(feature = "prometheus")]
-pub fn render() -> String {
-    PROMETHEUS.get().map(|h| h.render()).unwrap_or_default()
+    Ok(handle)
 }

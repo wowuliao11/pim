@@ -157,20 +157,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("{}:{}", settings.host, settings.port).parse()?;
 
     // Initialize Prometheus metrics recorder
-    if let Err(err) = telemetry::init("auth-service") {
-        tracing::warn!(error = %err, "failed to initialize metrics");
+    // Env is sourced from infra-config (not read inside the library)
+    match telemetry::install_prometheus(
+        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(settings.common.app_env.clone()),
+    ) {
+        Ok(handle) => {
+            // Start metrics HTTP server (management plane)
+            let metrics_host = settings.host.clone();
+            let metrics_port = settings.metrics_port;
+            tokio::spawn(async move {
+                if let Err(err) = telemetry::serve_metrics_http(&metrics_host, metrics_port, handle).await {
+                    tracing::warn!(error = %err, "metrics server stopped");
+                }
+            });
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, "failed to initialize metrics");
+        }
     }
 
-    // Start metrics HTTP server (management plane)
-    let metrics_host = settings.host.clone();
-    let metrics_port = settings.metrics_port;
-    tokio::spawn(async move {
-        if let Err(err) = telemetry::serve_metrics_http(&metrics_host, metrics_port).await {
-            tracing::warn!(error = %err, "metrics server stopped");
-        }
-    });
-
-    tracing::info!("Starting auth-service on {}", addr);
+    tracing::info!("Starting {} on {}", env!("CARGO_PKG_NAME"), addr);
 
     let auth_service = AuthServiceImpl::new(settings.jwt_secret, settings.jwt_expiration_hours);
 
