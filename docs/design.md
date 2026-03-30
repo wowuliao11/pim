@@ -48,6 +48,7 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 | -------------- | -------------------- | ---------------------------- |
 | Contract       | `proto/`             | Protobuf definitions (SSoT)  |
 | Boundary       | `libs/rpc-proto`     | Generated gRPC code only     |
+| Authentication | `libs/infra-auth`      | JWT token management (shared)|
 | Configuration  | `libs/infra-config`    | Config loading & environment |
 | Observability  | `libs/infra-telemetry` | Metrics, tracing primitives  |
 | Gateway        | `apps/api-gateway`   | HTTP↔gRPC translation        |
@@ -57,6 +58,7 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 
 ```
 apps/* → libs/rpc-proto → proto/
+apps/* → libs/infra-auth
 apps/* → libs/infra-config
 apps/* → libs/infra-telemetry
 ```

@@ -1,15 +1,19 @@
 use actix_web::{web, HttpResponse};
 
 use anyhow::Context;
+use infra_auth::JwtManager;
 
 use crate::api::v1::dto::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
 use crate::config::AppConfig;
 use crate::errors::{AppError, ValidationError};
-use crate::middlewares::auth::generate_token;
 
 /// POST /api/v1/auth/login
 /// Authenticate user and return JWT token
-pub async fn login(body: web::Json<LoginRequest>, config: web::Data<AppConfig>) -> Result<HttpResponse, AppError> {
+pub async fn login(
+    body: web::Json<LoginRequest>,
+    config: web::Data<AppConfig>,
+    jwt_manager: web::Data<JwtManager>,
+) -> Result<HttpResponse, AppError> {
     // TODO: Validate credentials against database
     // This is a placeholder implementation
 
@@ -17,14 +21,12 @@ pub async fn login(body: web::Json<LoginRequest>, config: web::Data<AppConfig>) 
         return Err(ValidationError::MissingCredentials.into());
     }
 
-    // Generate JWT token
-    let token = generate_token(
-        &body.email, // In real app, use user ID from database
-        vec!["user".to_string()],
-        config.jwt_secret(),
-        config.jwt_expiration_hours(),
-    )
-    .context("Failed to generate token")?;
+    let token = jwt_manager
+        .generate_token(
+            &body.email, // In real app, use user ID from database
+            vec!["user".to_string()],
+        )
+        .context("Failed to generate token")?;
 
     let response = LoginResponse {
         access_token: token,

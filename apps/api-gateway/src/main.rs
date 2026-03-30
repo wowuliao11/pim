@@ -1,21 +1,15 @@
+use std::sync::Arc;
+
 use actix_web::{web, App, HttpServer};
 use api_gateway::config::load_app_config;
 use api_gateway::middlewares::{HttpMetrics, RequestId, RequestLogging};
 use api_gateway::router::configure_routes;
+use infra_auth::JwtManager;
 use infra_telemetry as telemetry;
-
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Initialize tracing
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "api_gateway=info,actix_web=info,common=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    telemetry::init_tracing("api_gateway=info,actix_web=info,common=info");
 
     // Load configuration
     let config =
@@ -25,7 +19,7 @@ async fn main() -> std::io::Result<()> {
     // Initialize Prometheus metrics recorder
     // Env is sourced from infra-config (not read inside the library)
     match telemetry::install_prometheus(
-        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(config.settings.common.app_env.clone()),
+        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(config.settings.common.app_env.to_string()),
     ) {
         Ok(handle) => {
             let metrics_host = config.settings.app.host.clone();
@@ -44,19 +38,21 @@ async fn main() -> std::io::Result<()> {
     tracing::info!("Starting {} server at http://{}", config.app_name(), bind_address);
 
     // wrap config in web::Data once (internally Arc), then clone cheaply in closure
+    let jwt_manager = Arc::new(JwtManager::new(
+        config.jwt_secret().to_owned(),
+        config.jwt_expiration_hours(),
+    ));
+    let jwt_data = web::Data::from(jwt_manager.clone());
     let config_data = web::Data::new(config);
 
-    // Start HTTP server
     HttpServer::new(move || {
         App::new()
-            // Add shared application state
             .app_data(config_data.clone())
-            // Add middlewares
+            .app_data(jwt_data.clone())
             .wrap(HttpMetrics)
             .wrap(RequestLogging)
             .wrap(RequestId)
-            // Configure routes
-            .configure(configure_routes)
+            .configure(configure_routes(jwt_manager.clone()))
     })
     .bind(&bind_address)?
     .run()

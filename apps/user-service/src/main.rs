@@ -4,7 +4,6 @@ use rpc_proto::user::v1::{
     GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse, User,
 };
 use tonic::{transport::Server, Request, Response, Status};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use infra_telemetry as telemetry;
 
@@ -130,13 +129,7 @@ impl UserService for UserServiceImpl {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "user_service=info,common=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    telemetry::init_tracing("user_service=info,common=info");
 
     // Load configuration
     let settings = load_settings()?;
@@ -145,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Prometheus metrics recorder
     // Env is sourced from infra-config (not read inside the library)
     match telemetry::install_prometheus(
-        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(settings.common.app_env.clone()),
+        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(settings.common.app_env.to_string()),
     ) {
         Ok(handle) => {
             // Start metrics HTTP server (management plane)

@@ -4,15 +4,13 @@ use rpc_proto::auth::v1::{
     ValidateTokenRequest, ValidateTokenResponse,
 };
 use tonic::{transport::Server, Request, Response, Status};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use infra_telemetry as telemetry;
 
 mod config;
-mod jwt;
 
 use config::load_settings;
-use jwt::JwtManager;
+use infra_auth::JwtManager;
 
 /// Auth service implementation
 pub struct AuthServiceImpl {
@@ -50,7 +48,7 @@ impl AuthService for AuthServiceImpl {
         let response = LoginResponse {
             access_token: token,
             token_type: "Bearer".to_string(),
-            expires_in: self.jwt_manager.expiration_hours * 3600,
+            expires_in: self.jwt_manager.expiration_hours() * 3600,
             user_id,
         };
 
@@ -134,7 +132,7 @@ impl AuthService for AuthServiceImpl {
         let response = RefreshTokenResponse {
             access_token: new_token,
             token_type: "Bearer".to_string(),
-            expires_in: self.jwt_manager.expiration_hours * 3600,
+            expires_in: self.jwt_manager.expiration_hours() * 3600,
         };
 
         Ok(Response::new(response))
@@ -144,13 +142,7 @@ impl AuthService for AuthServiceImpl {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "auth_service=info,common=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    telemetry::init_tracing("auth_service=info,common=info");
 
     // Load configuration
     let settings = load_settings()?;
@@ -159,7 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Prometheus metrics recorder
     // Env is sourced from infra-config (not read inside the library)
     match telemetry::install_prometheus(
-        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(settings.common.app_env.clone()),
+        telemetry::PrometheusOptions::new(env!("CARGO_PKG_NAME")).env(settings.common.app_env.to_string()),
     ) {
         Ok(handle) => {
             // Start metrics HTTP server (management plane)

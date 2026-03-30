@@ -89,8 +89,8 @@ pim/
 
 **Acceptance Criteria**:
 
-- [ ] `cargo build` passes
-- [ ] `cargo run -p api-gateway` starts HTTP server on configured port
+- [x] `cargo build` passes
+- [x] `cargo run -p api-gateway` starts HTTP server on configured port
 
 ---
 
@@ -108,8 +108,8 @@ pim/
 
 **Acceptance Criteria**:
 
-- [ ] `cargo build -p rpc-proto` succeeds
-- [ ] Generated Rust types are usable from other crates
+- [x] `cargo build -p rpc-proto` succeeds
+- [x] Generated Rust types are usable from other crates
 
 ---
 
@@ -127,8 +127,8 @@ pim/
 
 **Acceptance Criteria**:
 
-- [ ] `apps/api-gateway` compiles with `libs/common` dependency
-- [ ] No duplicate error/config/tracing code in gateway
+- [x] `apps/api-gateway` compiles with `libs/common` dependency
+- [x] No duplicate error/config/tracing code in gateway
 
 ---
 
@@ -145,8 +145,8 @@ pim/
 
 **Acceptance Criteria**:
 
-- [ ] `cargo run -p auth-service` starts gRPC server
-- [ ] `cargo run -p user-service` starts gRPC server
+- [x] `cargo run -p auth-service` starts gRPC server
+- [x] `cargo run -p user-service` starts gRPC server
 - [ ] Services respond to gRPC requests (grpcurl / grpcui test)
 
 ---
@@ -182,9 +182,9 @@ pim/
 
 **Acceptance Criteria**:
 
-- [ ] `docs/design.md` reflects actual system
-- [ ] `.github/copilot-instructions.md` exists with clear guidance
-- [ ] No files remain under `crates/`
+- [x] `docs/design.md` reflects actual system
+- [x] `.github/copilot-instructions.md` exists with clear guidance
+- [x] No files remain under `crates/`
 
 ---
 

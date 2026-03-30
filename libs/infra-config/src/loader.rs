@@ -1,6 +1,8 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 
+use crate::AppEnv;
+
 /// Common configuration fields shared across services
 ///
 /// Use `#[serde(flatten)]` in your service-specific config struct to include these fields.
@@ -22,9 +24,9 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommonConfig {
-    /// Application environment: dev, staging, prod, test
-    #[serde(default = "default_app_env")]
-    pub app_env: String,
+    /// Application environment: dev, staging, prod
+    #[serde(default)]
+    pub app_env: AppEnv,
 
     /// Log level: trace, debug, info, warn, error
     #[serde(default = "default_log_level")]
@@ -35,10 +37,6 @@ pub struct CommonConfig {
     pub database_url: Option<String>,
 }
 
-fn default_app_env() -> String {
-    "dev".to_string()
-}
-
 fn default_log_level() -> String {
     "info".to_string()
 }
@@ -46,7 +44,7 @@ fn default_log_level() -> String {
 impl Default for CommonConfig {
     fn default() -> Self {
         Self {
-            app_env: default_app_env(),
+            app_env: AppEnv::default(),
             log_level: default_log_level(),
             database_url: None,
         }

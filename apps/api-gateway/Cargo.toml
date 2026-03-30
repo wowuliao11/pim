@@ -11,13 +11,13 @@ path = "src/main.rs"
 # Workspace crates
 infra-config = { path = "../../libs/infra-config" }
 infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "http"] }
+infra-auth = { path = "../../libs/infra-auth" }
 
 # External dependencies
 actix-web.workspace = true
 actix-rt.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-jsonwebtoken.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 config.workspace = true

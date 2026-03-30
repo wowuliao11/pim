@@ -1,6 +1,7 @@
 use std::{
     future::{ready, Ready},
     rc::Rc,
+    sync::Arc,
 };
 
 use actix_web::{
@@ -9,20 +10,9 @@ use actix_web::{
     Error, HttpMessage,
 };
 use futures_util::future::LocalBoxFuture;
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
+use infra_auth::JwtManager;
 
 use crate::errors::{AppError, AuthError};
-
-/// JWT Claims structure
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    pub sub: String, // Subject (user ID)
-    pub exp: i64,    // Expiration time
-    pub iat: i64,    // Issued at
-    #[serde(default)]
-    pub roles: Vec<String>, // User roles
-}
 
 /// Authenticated user data extracted from JWT
 #[derive(Debug, Clone)]
@@ -34,12 +24,12 @@ pub struct AuthenticatedUser {
 /// JWT Authentication middleware
 /// Validates JWT tokens and extracts user information
 pub struct JwtAuth {
-    secret: String,
+    jwt_manager: Arc<JwtManager>,
 }
 
 impl JwtAuth {
-    pub fn new(secret: impl Into<String>) -> Self {
-        Self { secret: secret.into() }
+    pub fn new(jwt_manager: Arc<JwtManager>) -> Self {
+        Self { jwt_manager }
     }
 }
 
@@ -58,14 +48,14 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(JwtAuthMiddleware {
             service: Rc::new(service),
-            secret: self.secret.clone(),
+            jwt_manager: self.jwt_manager.clone(),
         }))
     }
 }
 
 pub struct JwtAuthMiddleware<S> {
     service: Rc<S>,
-    secret: String,
+    jwt_manager: Arc<JwtManager>,
 }
 
 impl<S, B> Service<ServiceRequest> for JwtAuthMiddleware<S>
@@ -82,7 +72,7 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = self.service.clone();
-        let secret = self.secret.clone();
+        let jwt_manager = self.jwt_manager.clone();
 
         Box::pin(async move {
             // Extract Authorization header
@@ -96,46 +86,17 @@ where
             };
 
             // Validate JWT token
-            let token_data = decode::<Claims>(
-                token,
-                &DecodingKey::from_secret(secret.as_bytes()),
-                &Validation::default(),
-            )
-            .map_err(|_| AppError::from(AuthError::InvalidToken))?;
+            let claims = jwt_manager
+                .validate_token(token)
+                .map_err(|_| AppError::from(AuthError::InvalidToken))?;
 
             // Store authenticated user in request extensions
             req.extensions_mut().insert(AuthenticatedUser {
-                user_id: token_data.claims.sub.clone(),
-                roles: token_data.claims.roles.clone(),
+                user_id: claims.sub,
+                roles: claims.roles,
             });
 
             service.call(req).await
         })
     }
-}
-
-/// Helper function to generate JWT token
-pub fn generate_token(
-    user_id: &str,
-    roles: Vec<String>,
-    secret: &str,
-    expiration_hours: i64,
-) -> Result<String, jsonwebtoken::errors::Error> {
-    use jsonwebtoken::{encode, EncodingKey, Header};
-
-    let now = chrono::Utc::now().timestamp();
-    let exp = now + (expiration_hours * 3600);
-
-    let claims = Claims {
-        sub: user_id.to_string(),
-        exp,
-        iat: now,
-        roles,
-    };
-
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )
 }

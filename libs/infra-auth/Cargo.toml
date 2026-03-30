@@ -1,0 +1,10 @@
+[package]
+name = "infra-auth"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+jsonwebtoken.workspace = true
+serde.workspace = true
+chrono.workspace = true
+thiserror.workspace = true

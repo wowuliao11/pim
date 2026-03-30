@@ -12,6 +12,7 @@ path = "src/main.rs"
 rpc-proto = { path = "../../libs/rpc-proto" }
 infra-config = { path = "../../libs/infra-config" }
 infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "grpc", "http"] }
+infra-auth = { path = "../../libs/infra-auth" }
 
 # gRPC
 tonic.workspace = true
@@ -20,9 +21,6 @@ prost.workspace = true
 # Async Runtime
 tokio.workspace = true
 async-trait.workspace = true
-
-# Security
-jsonwebtoken.workspace = true
 
 # Serialization
 serde.workspace = true

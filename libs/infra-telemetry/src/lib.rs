@@ -6,6 +6,19 @@
 //! - HTTP metrics endpoint server
 //! - Standard metric labels and names
 
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+/// Initialize the tracing subscriber with env-filter and fmt layer.
+///
+/// Reads `RUST_LOG` env var; falls back to `default_filter` if unset.
+/// Call once at service startup before any tracing macros.
+pub fn init_tracing(default_filter: impl Into<String>) {
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter.into().into()))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+}
+
 #[cfg(feature = "grpc")]
 mod grpc_metrics;
 

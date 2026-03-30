@@ -202,3 +202,14 @@ Before merging any code, ask:
 - Is it only for a hypothetical future observability integration?
 
 If the answer is not the former, the code must not exist.
+
+## 9) Status Tracking
+
+| Section                     | Status      | Notes                                                   |
+| --------------------------- | ----------- | ------------------------------------------------------- |
+| Logging framework (§4.1)    | ✅ Complete | `tracing` + `tracing-subscriber` used across all services |
+| Logging fields (§4.2)       | ✅ Complete | `RequestId`, `RequestLogging` middlewares in gateway     |
+| Error modeling (§5.1)       | ✅ Complete | Typed errors via `thiserror` in gateway (`AppError`, `AuthError`, etc.) |
+| Error → HTTP mapping (§5.4) | ✅ Complete | `ResponseError` impl on `AppError` with explicit status codes |
+| Error propagation (§5.2)    | ✅ Complete | `anyhow` at boundary, `thiserror` for domain errors     |
+| Structured JSON logs (§4.1) | Partial     | JSON feature enabled in `tracing-subscriber` but not activated by default |
