@@ -1,6 +1,7 @@
 use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::Error;
 use futures_util::future::{ready, LocalBoxFuture, Ready};
+use infra_telemetry::metrics;
 use infra_telemetry::{
     ERROR_KIND_LOGIC, ERROR_KIND_SYSTEM, LABEL_ERROR_KIND, LABEL_METHOD, LABEL_STATUS_CODE,
     METRIC_RPC_DURATION_SECONDS, METRIC_RPC_ERRORS_TOTAL, METRIC_RPC_REQUESTS_TOTAL,

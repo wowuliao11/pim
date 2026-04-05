@@ -1,9 +1,10 @@
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use api_gateway::config::load_app_config;
 use api_gateway::middlewares::{HttpMetrics, RequestId, RequestLogging};
 use api_gateway::router::configure_routes;
 use infra_auth::IntrospectionConfigBuilder;
 use infra_telemetry as telemetry;
+use rpc_proto::user::v1::user_service_client::UserServiceClient;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -39,12 +40,21 @@ async fn main() -> std::io::Result<()> {
         .await
         .map_err(|e| std::io::Error::other(format!("Failed to build Zitadel introspection config: {}", e)))?;
 
+    // Connect to user-service gRPC
+    let user_service_url = config.user_service_url().to_string();
+    tracing::info!("Connecting to user-service at {}", user_service_url);
+    let user_service_client = UserServiceClient::connect(user_service_url)
+        .await
+        .map_err(|e| std::io::Error::other(format!("Failed to connect to user-service: {}", e)))?;
+    let user_service_data = web::Data::new(user_service_client);
+
     tracing::info!("Starting {} server at http://{}", config.app_name(), bind_address);
     tracing::info!("Zitadel authority: {}", config.zitadel_authority());
 
     HttpServer::new(move || {
         App::new()
             .app_data(introspection_config.clone())
+            .app_data(user_service_data.clone())
             .wrap(HttpMetrics)
             .wrap(RequestLogging)
             .wrap(RequestId)

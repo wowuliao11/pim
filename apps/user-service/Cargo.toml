@@ -16,6 +16,7 @@ infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus
 # gRPC
 tonic.workspace = true
 prost.workspace = true
+prost-types.workspace = true
 
 # Async Runtime
 tokio.workspace = true

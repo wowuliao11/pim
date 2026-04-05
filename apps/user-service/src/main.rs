@@ -3,6 +3,7 @@ use rpc_proto::user::v1::{
     DeleteUserRequest, DeleteUserResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetUserRequest,
     GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse, User,
 };
+use serde::Deserialize;
 use tonic::{transport::Server, Request, Response, Status};
 
 use infra_telemetry as telemetry;
@@ -10,6 +11,104 @@ use infra_telemetry as telemetry;
 mod config;
 
 use config::load_settings;
+
+/// Parse an RFC 3339 / ISO 8601 datetime string into a `prost_types::Timestamp`.
+/// Returns `None` if the string is empty or unparseable.
+fn parse_rfc3339(s: &str) -> Option<prost_types::Timestamp> {
+    if s.is_empty() {
+        return None;
+    }
+    chrono::DateTime::parse_from_rfc3339(s)
+        .ok()
+        .map(|dt| prost_types::Timestamp {
+            seconds: dt.timestamp(),
+            nanos: dt.timestamp_subsec_nanos() as i32,
+        })
+}
+
+// ── Zitadel v2 API response types ──────────────────────────────────────────
+
+/// Wrapper for a single-user GET response (`GET /v2/users/{id}`).
+#[derive(Deserialize)]
+struct ZitadelUserResponse {
+    user: ZitadelUser,
+}
+
+/// Wrapper for the list/search POST response (`POST /v2/users`).
+#[derive(Deserialize)]
+struct ZitadelListUsersResponse {
+    #[serde(default)]
+    result: Vec<ZitadelUser>,
+    #[serde(default)]
+    details: ZitadelListDetails,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ZitadelListDetails {
+    #[serde(default)]
+    total_result: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ZitadelUser {
+    #[serde(default)]
+    user_id: String,
+    #[serde(default)]
+    human: Option<ZitadelHuman>,
+    #[serde(default)]
+    details: Option<ZitadelResourceDetails>,
+}
+
+#[derive(Deserialize)]
+struct ZitadelHuman {
+    #[serde(default)]
+    profile: Option<ZitadelProfile>,
+    #[serde(default)]
+    email: Option<ZitadelEmail>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ZitadelProfile {
+    #[serde(default)]
+    given_name: String,
+    #[serde(default)]
+    family_name: String,
+}
+
+#[derive(Deserialize)]
+struct ZitadelEmail {
+    #[serde(default)]
+    email: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ZitadelResourceDetails {
+    #[serde(default)]
+    creation_date: String,
+    #[serde(default)]
+    change_date: String,
+}
+
+/// Validate that a user ID looks like a valid Zitadel resource ID.
+///
+/// Zitadel uses numeric string IDs (e.g. "123456789012345678").
+/// Rejecting unexpected formats prevents SSRF via URL path injection.
+#[allow(clippy::result_large_err)]
+fn validate_user_id(id: &str) -> Result<(), Status> {
+    if id.is_empty() {
+        return Err(Status::invalid_argument("User ID is required"));
+    }
+    // Zitadel IDs are numeric strings; reject anything with path separators,
+    // whitespace, or non-alphanumeric characters that could manipulate the URL.
+    if !id.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(Status::invalid_argument("Invalid user ID format"));
+    }
+    Ok(())
+}
 
 /// User service implementation backed by Zitadel Management REST API v2.
 ///
@@ -23,28 +122,45 @@ pub struct UserServiceImpl {
 
 impl UserServiceImpl {
     pub fn new(zitadel_authority: String, service_account_token: String) -> Self {
+        use std::time::Duration;
+        let http_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .connect_timeout(Duration::from_secs(5))
+            .build()
+            .expect("failed to build HTTP client");
+
         Self {
-            http_client: reqwest::Client::new(),
+            http_client,
             zitadel_authority,
             service_account_token,
         }
     }
 
-    /// Extract a User from Zitadel v2 user JSON response.
-    fn user_from_json(body: &serde_json::Value) -> User {
-        let user_id = body["userId"].as_str().unwrap_or_default().to_string();
-
-        let given_name = body["human"]["profile"]["givenName"].as_str().unwrap_or_default();
-        let family_name = body["human"]["profile"]["familyName"].as_str().unwrap_or_default();
+    /// Convert a typed Zitadel user into the proto `User`.
+    fn zitadel_user_to_proto(zu: &ZitadelUser) -> User {
+        let (given_name, family_name) = zu
+            .human
+            .as_ref()
+            .and_then(|h| h.profile.as_ref())
+            .map(|p| (p.given_name.as_str(), p.family_name.as_str()))
+            .unwrap_or_default();
         let name = format!("{} {}", given_name, family_name).trim().to_string();
 
-        let email = body["human"]["email"]["email"].as_str().unwrap_or_default().to_string();
+        let email = zu
+            .human
+            .as_ref()
+            .and_then(|h| h.email.as_ref())
+            .map(|e| e.email.clone())
+            .unwrap_or_default();
 
-        let created_at = body["details"]["creationDate"].as_str().unwrap_or_default().to_string();
-        let updated_at = body["details"]["changeDate"].as_str().unwrap_or_default().to_string();
+        let (created_at, updated_at) = zu
+            .details
+            .as_ref()
+            .map(|d| (parse_rfc3339(&d.creation_date), parse_rfc3339(&d.change_date)))
+            .unwrap_or_default();
 
         User {
-            id: user_id,
+            id: zu.user_id.clone(),
             email,
             name,
             created_at,
@@ -52,29 +168,23 @@ impl UserServiceImpl {
         }
     }
 
-    /// Map reqwest errors to gRPC Status.
+    /// Map reqwest errors to gRPC Status (generic message — details stay in logs only).
     fn map_reqwest_err(e: reqwest::Error) -> Status {
         tracing::error!(error = %e, "Zitadel API request failed");
-        Status::internal(format!("Zitadel API error: {}", e))
+        Status::internal("upstream service request failed")
     }
 
-    /// Map JSON parse errors to gRPC Status.
+    /// Map JSON parse errors to gRPC Status (generic message — details stay in logs only).
     fn map_json_err(e: reqwest::Error) -> Status {
         tracing::error!(error = %e, "Failed to parse Zitadel API response");
-        Status::internal(format!("Zitadel response parse error: {}", e))
+        Status::internal("upstream service returned an invalid response")
     }
-}
 
-#[tonic::async_trait]
-impl UserService for UserServiceImpl {
-    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<GetUserResponse>, Status> {
-        let req = request.into_inner();
+    /// Fetch a single user by ID from Zitadel, returning a parsed `User`.
+    async fn fetch_user_by_id(&self, user_id: &str) -> Result<User, Status> {
+        validate_user_id(user_id)?;
 
-        if req.id.is_empty() {
-            return Err(Status::invalid_argument("User ID is required"));
-        }
-
-        let url = format!("{}/v2/users/{}", self.zitadel_authority, req.id);
+        let url = format!("{}/v2/users/{}", self.zitadel_authority, user_id);
         let response = self
             .http_client
             .get(&url)
@@ -91,12 +201,19 @@ impl UserService for UserServiceImpl {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
             tracing::error!(status = %status, body = %body, "Zitadel API error");
-            return Err(Status::internal(format!("Zitadel API returned {}", status)));
+            return Err(Status::internal("upstream service error"));
         }
 
-        let body: serde_json::Value = response.json().await.map_err(Self::map_json_err)?;
-        let user = Self::user_from_json(&body["user"]);
+        let resp: ZitadelUserResponse = response.json().await.map_err(Self::map_json_err)?;
+        Ok(Self::zitadel_user_to_proto(&resp.user))
+    }
+}
 
+#[tonic::async_trait]
+impl UserService for UserServiceImpl {
+    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<GetUserResponse>, Status> {
+        let req = request.into_inner();
+        let user = self.fetch_user_by_id(&req.id).await?;
         Ok(Response::new(GetUserResponse { user: Some(user) }))
     }
 
@@ -133,19 +250,14 @@ impl UserService for UserServiceImpl {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
             tracing::error!(status = %status, body = %body, "Zitadel list users API error");
-            return Err(Status::internal(format!("Zitadel API returned {}", status)));
+            return Err(Status::internal("upstream service error"));
         }
 
-        let resp_body: serde_json::Value = response.json().await.map_err(Self::map_json_err)?;
+        let resp: ZitadelListUsersResponse = response.json().await.map_err(Self::map_json_err)?;
 
-        let users: Vec<User> = resp_body["result"]
-            .as_array()
-            .unwrap_or(&vec![])
-            .iter()
-            .map(Self::user_from_json)
-            .collect();
+        let users: Vec<User> = resp.result.iter().map(Self::zitadel_user_to_proto).collect();
 
-        let total = resp_body["details"]["totalResult"].as_i64().unwrap_or(0) as i32;
+        let total = resp.details.total_result as i32;
 
         Ok(Response::new(ListUsersResponse {
             users,
@@ -167,39 +279,13 @@ impl UserService for UserServiceImpl {
             ));
         }
 
-        // Reuse get_user logic
-        let url = format!("{}/v2/users/{}", self.zitadel_authority, req.user_id);
-        let response = self
-            .http_client
-            .get(&url)
-            .bearer_auth(&self.service_account_token)
-            .send()
-            .await
-            .map_err(Self::map_reqwest_err)?;
-
-        if response.status() == reqwest::StatusCode::NOT_FOUND {
-            return Err(Status::not_found("User not found"));
-        }
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            tracing::error!(status = %status, body = %body, "Zitadel API error");
-            return Err(Status::internal(format!("Zitadel API returned {}", status)));
-        }
-
-        let body: serde_json::Value = response.json().await.map_err(Self::map_json_err)?;
-        let user = Self::user_from_json(&body["user"]);
-
+        let user = self.fetch_user_by_id(&req.user_id).await?;
         Ok(Response::new(GetCurrentUserResponse { user: Some(user) }))
     }
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UpdateUserResponse>, Status> {
         let req = request.into_inner();
-
-        if req.id.is_empty() {
-            return Err(Status::invalid_argument("User ID is required"));
-        }
+        validate_user_id(&req.id)?;
 
         // Update profile via Zitadel v2 API
         // PATCH /v2/users/{userId}
@@ -244,32 +330,18 @@ impl UserService for UserServiceImpl {
                 let status = response.status();
                 let body = response.text().await.unwrap_or_default();
                 tracing::error!(status = %status, body = %body, "Zitadel update user API error");
-                return Err(Status::internal(format!("Zitadel API returned {}", status)));
+                return Err(Status::internal("upstream service error"));
             }
         }
 
         // Fetch updated user
-        let get_url = format!("{}/v2/users/{}", self.zitadel_authority, req.id);
-        let get_response = self
-            .http_client
-            .get(&get_url)
-            .bearer_auth(&self.service_account_token)
-            .send()
-            .await
-            .map_err(Self::map_reqwest_err)?;
-
-        let body: serde_json::Value = get_response.json().await.map_err(Self::map_json_err)?;
-        let user = Self::user_from_json(&body["user"]);
-
+        let user = self.fetch_user_by_id(&req.id).await?;
         Ok(Response::new(UpdateUserResponse { user: Some(user) }))
     }
 
     async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<DeleteUserResponse>, Status> {
         let req = request.into_inner();
-
-        if req.id.is_empty() {
-            return Err(Status::invalid_argument("User ID is required"));
-        }
+        validate_user_id(&req.id)?;
 
         let url = format!("{}/v2/users/{}", self.zitadel_authority, req.id);
         let response = self
@@ -288,7 +360,7 @@ impl UserService for UserServiceImpl {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
             tracing::error!(status = %status, body = %body, "Zitadel delete user API error");
-            return Err(Status::internal(format!("Zitadel API returned {}", status)));
+            return Err(Status::internal("upstream service error"));
         }
 
         Ok(Response::new(DeleteUserResponse { success: true }))

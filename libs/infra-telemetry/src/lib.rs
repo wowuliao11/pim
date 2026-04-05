@@ -30,6 +30,12 @@ mod metrics_http;
 // Re-export labels (always available when any telemetry feature is enabled)
 pub use labels::*;
 
+// Re-export the metrics crate so consumers use the same version as the recorder.
+// Without this, consumers that depend on a different `metrics` version will silently
+// write to a different global recorder and all their metrics will be lost.
+#[cfg(feature = "prometheus")]
+pub use metrics;
+
 // Re-export gRPC metrics when feature is enabled
 #[cfg(feature = "grpc")]
 pub use grpc_metrics::*;

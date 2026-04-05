@@ -21,6 +21,10 @@ impl AppConfig {
         &self.settings.app.name
     }
 
+    pub fn user_service_url(&self) -> &str {
+        &self.settings.app.user_service_url
+    }
+
     pub fn zitadel_authority(&self) -> &str {
         &self.settings.zitadel.authority
     }
