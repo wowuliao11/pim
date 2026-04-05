@@ -54,19 +54,17 @@ impl Default for AppSettings {
 pub struct ZitadelSettings {
     /// Zitadel instance URL, e.g. "https://my-instance.zitadel.cloud"
     pub authority: String,
-    /// API application client ID (for token introspection)
-    pub client_id: String,
-    /// API application client secret (for token introspection)
-    pub client_secret: String,
+    /// Path to the Zitadel API application JSON key file (downloaded from Zitadel console)
+    /// The file contains: type, keyId, key (RSA private key), appId, clientId
+    pub key_file: String,
 }
 
-// Manual Debug impl: mask client_secret to prevent leaking credentials in logs
+// Manual Debug impl for ZitadelSettings
 impl fmt::Debug for ZitadelSettings {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ZitadelSettings")
             .field("authority", &self.authority)
-            .field("client_id", &self.client_id)
-            .field("client_secret", &"[REDACTED]")
+            .field("key_file", &self.key_file)
             .finish()
     }
 }
@@ -75,8 +73,7 @@ impl Default for ZitadelSettings {
     fn default() -> Self {
         Self {
             authority: "https://localhost.zitadel.cloud".to_string(),
-            client_id: "change-me".to_string(),
-            client_secret: "change-me".to_string(),
+            key_file: "zitadel-key.json".to_string(),
         }
     }
 }

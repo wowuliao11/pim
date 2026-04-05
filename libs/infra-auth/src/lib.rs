@@ -6,3 +6,6 @@
 
 // Re-export the actix introspection types that consumers need
 pub use zitadel::actix::introspection::{IntrospectedUser, IntrospectionConfig, IntrospectionConfigBuilder};
+
+// Re-export Application credential type for JWT Profile authentication
+pub use zitadel::credentials::Application;

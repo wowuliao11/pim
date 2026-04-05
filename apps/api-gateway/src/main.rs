@@ -2,7 +2,7 @@ use actix_web::{web, App, HttpServer};
 use api_gateway::config::load_app_config;
 use api_gateway::middlewares::{HttpMetrics, RequestId, RequestLogging};
 use api_gateway::router::configure_routes;
-use infra_auth::IntrospectionConfigBuilder;
+use infra_auth::{Application, IntrospectionConfigBuilder};
 use infra_telemetry as telemetry;
 use rpc_proto::user::v1::user_service_client::UserServiceClient;
 
@@ -33,9 +33,18 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
+    // Load Zitadel application key file for JWT Profile authentication
+    let application = Application::load_from_file(config.zitadel_key_file()).map_err(|e| {
+        std::io::Error::other(format!(
+            "Failed to load Zitadel key file '{}': {}",
+            config.zitadel_key_file(),
+            e
+        ))
+    })?;
+
     // Build Zitadel introspection config (fetches OIDC discovery document)
     let introspection_config = IntrospectionConfigBuilder::new(config.zitadel_authority())
-        .with_basic_auth(config.zitadel_client_id(), config.zitadel_client_secret())
+        .with_jwt_profile(application)
         .build()
         .await
         .map_err(|e| std::io::Error::other(format!("Failed to build Zitadel introspection config: {}", e)))?;

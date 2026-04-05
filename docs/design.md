@@ -51,7 +51,7 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 ### Authentication Flow
 
 1. **Clients** (Tauri mobile app, React admin panel) authenticate directly with Zitadel Cloud using Authorization Code + PKCE flow
-2. **API Gateway** receives Bearer tokens and validates them via Zitadel's Token Introspection endpoint using the `zitadel` crate's `IntrospectedUser` actix extractor
+2. **API Gateway** receives Bearer tokens and validates them via Zitadel's Token Introspection endpoint using JWT Profile authentication (via the `zitadel` crate's `IntrospectedUser` actix extractor)
 3. **Protected handlers** include `IntrospectedUser` as a function parameter — no custom middleware needed
 4. **Gateway proxies** user requests to user-service over gRPC, passing the authenticated user ID
 5. **user-service** proxies user queries to Zitadel's Management REST API v2 using a service account PAT
@@ -155,8 +155,7 @@ All services use a **shared configuration loader** from `libs/infra-config` that
 - `APP__APP__HOST=0.0.0.0` → `app.host`
 - `APP__APP__USER_SERVICE_URL=http://user-svc:50051` → `app.user_service_url`
 - `APP__ZITADEL__AUTHORITY=https://my.zitadel.cloud` → `zitadel.authority`
-- `APP__ZITADEL__CLIENT_ID=my-client-id` → `zitadel.client_id`
-- `APP__ZITADEL__CLIENT_SECRET=my-secret` → `zitadel.client_secret`
+- `APP__ZITADEL__KEY_FILE=./keys/api-gateway.json` → `zitadel.key_file`
 - `USER_SERVICE__ZITADEL_AUTHORITY=https://my.zitadel.cloud` → `zitadel_authority`
 - `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN=pat-xxx` → `zitadel_service_account_token`
 

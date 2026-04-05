@@ -27,8 +27,8 @@ name = "api-gateway"
 url = "postgres://localhost/pim"
 
 [zitadel]
-# IMPORTANT: Replace these with your actual Zitadel credentials!
-# Create an API application in your Zitadel project with Basic Auth.
+# IMPORTANT: Replace these with your actual Zitadel settings!
+# Create an API application in your Zitadel project with JWT Profile authentication.
+# Download the JSON key file from the Zitadel console and place it in a secure location.
 authority = "https://my-instance.zitadel.cloud"
-client_id = "your-api-app-client-id@your-project"
-client_secret = "your-api-app-client-secret"
+key_file = "zitadel-key.json"

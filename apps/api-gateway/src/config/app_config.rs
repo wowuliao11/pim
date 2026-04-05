@@ -29,12 +29,8 @@ impl AppConfig {
         &self.settings.zitadel.authority
     }
 
-    pub fn zitadel_client_id(&self) -> &str {
-        &self.settings.zitadel.client_id
-    }
-
-    pub fn zitadel_client_secret(&self) -> &str {
-        &self.settings.zitadel.client_secret
+    pub fn zitadel_key_file(&self) -> &str {
+        &self.settings.zitadel.key_file
     }
 }
 

@@ -65,8 +65,7 @@ We use **double underscores (`__`)** as the nesting separator for structured con
 | `app.host`                       | `APP__APP__HOST`                                  | `0.0.0.0`                             |
 | `app.port`                       | `APP__APP__PORT`                                  | `8080`                                |
 | `zitadel.authority`              | `APP__ZITADEL__AUTHORITY`                         | `https://my-instance.zitadel.cloud`   |
-| `zitadel.client_id`             | `APP__ZITADEL__CLIENT_ID`                         | `123456789@my-project`                |
-| `zitadel.client_secret`         | `APP__ZITADEL__CLIENT_SECRET`                     | `secret-value`                        |
+| `zitadel.key_file`              | `APP__ZITADEL__KEY_FILE`                          | `./keys/api-gateway.json`             |
 | `zitadel_authority`              | `USER_SERVICE__ZITADEL_AUTHORITY`                 | `https://my-instance.zitadel.cloud`   |
 | `zitadel_service_account_token` | `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN`     | `pat-xxx`                             |
 
@@ -113,8 +112,7 @@ url = "postgres://localhost/pim"
 
 [zitadel]
 authority = "https://my-instance.zitadel.cloud"
-client_id = "your-api-app-client-id@your-project"
-client_secret = "your-api-app-client-secret"
+key_file = "zitadel-key.json"
 ```
 
 ### user-service (`apps/user-service/config.example.toml`)
@@ -136,13 +134,12 @@ zitadel_service_account_token = "your-service-account-pat"
 
 ### API Gateway (Token Introspection)
 
-The API Gateway validates incoming Bearer tokens by calling Zitadel's Token Introspection endpoint. This requires an **API application** in Zitadel with Basic Auth credentials:
+The API Gateway validates incoming Bearer tokens by calling Zitadel's Token Introspection endpoint. This requires an **API application** in Zitadel with JWT Profile authentication and a downloaded JSON key file:
 
-| Setting         | Description                                    | Env Var                        |
-| --------------- | ---------------------------------------------- | ------------------------------ |
-| `authority`     | Zitadel instance URL                           | `APP__ZITADEL__AUTHORITY`      |
-| `client_id`     | API application client ID                      | `APP__ZITADEL__CLIENT_ID`      |
-| `client_secret` | API application client secret                  | `APP__ZITADEL__CLIENT_SECRET`  |
+| Setting     | Description                              | Env Var                    |
+| ----------- | ---------------------------------------- | -------------------------- |
+| `authority` | Zitadel instance URL                     | `APP__ZITADEL__AUTHORITY`  |
+| `key_file`  | Path to Zitadel API app JSON key file    | `APP__ZITADEL__KEY_FILE`   |
 
 ### User Service (Management API Proxy)
 
@@ -241,7 +238,7 @@ infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus
 
 - [ ] Copy `config.example.toml` to `config.toml` for each service
 - [ ] Set all required environment variables with service-specific prefixes
-- [ ] Configure Zitadel credentials (API app client ID/secret for gateway, service account PAT for user-service)
+- [ ] Configure Zitadel credentials (API app JSON key file for gateway, service account PAT for user-service)
 - [ ] Validate database URLs and credentials
 - [ ] Set `APP_ENV=production` (or via `<SERVICE>__APP_ENV=production`)
 - [ ] Do not commit `config.toml` files containing secrets to version control
@@ -262,12 +259,13 @@ infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus
 3. Ensure `Default` trait provides valid fallback values
 4. Check service logs for detailed deserialization errors
 
-### Gateway fails with "Failed to build Zitadel introspection config"
+### Gateway fails with "Failed to load Zitadel key file" or "Failed to build Zitadel introspection config"
 
-1. Verify `zitadel.authority` points to a valid Zitadel instance
-2. Check that the Zitadel instance is reachable from the gateway
-3. Verify `client_id` and `client_secret` are correct (API application credentials)
-4. Ensure the Zitadel instance's OIDC discovery endpoint (`/.well-known/openid-configuration`) is accessible
+1. Verify `zitadel.key_file` path points to a valid JSON key file downloaded from Zitadel console
+2. Check the key file contains valid JSON with fields: `type`, `keyId`, `key`, `appId`, `clientId`
+3. Verify `zitadel.authority` points to a valid Zitadel instance
+4. Check that the Zitadel instance is reachable from the gateway
+5. Ensure the Zitadel instance's OIDC discovery endpoint (`/.well-known/openid-configuration`) is accessible
 
 ### Config values not overriding as expected
 
