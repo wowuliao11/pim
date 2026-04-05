@@ -405,3 +405,165 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── validate_user_id ──────────────────────────────────────────────
+
+    #[test]
+    fn validate_user_id_accepts_numeric() {
+        assert!(validate_user_id("123456789012345678").is_ok());
+    }
+
+    #[test]
+    fn validate_user_id_accepts_alphanumeric() {
+        assert!(validate_user_id("abc123DEF").is_ok());
+    }
+
+    #[test]
+    fn validate_user_id_rejects_empty() {
+        let err = validate_user_id("").unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().contains("required"));
+    }
+
+    #[test]
+    fn validate_user_id_rejects_path_traversal() {
+        let err = validate_user_id("../etc/passwd").unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().contains("Invalid"));
+    }
+
+    #[test]
+    fn validate_user_id_rejects_url_path_injection() {
+        let err = validate_user_id("123/../../admin").unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn validate_user_id_rejects_whitespace() {
+        assert!(validate_user_id("123 456").is_err());
+    }
+
+    #[test]
+    fn validate_user_id_rejects_special_chars() {
+        assert!(validate_user_id("id?query=1").is_err());
+        assert!(validate_user_id("id#fragment").is_err());
+        assert!(validate_user_id("id%00null").is_err());
+    }
+
+    // ── parse_rfc3339 ────────────────────────────────────────────────
+
+    #[test]
+    fn parse_rfc3339_valid_datetime() {
+        let ts = parse_rfc3339("2024-01-15T10:30:00Z").unwrap();
+        assert_eq!(ts.seconds, 1705314600);
+        assert_eq!(ts.nanos, 0);
+    }
+
+    #[test]
+    fn parse_rfc3339_with_nanos() {
+        let ts = parse_rfc3339("2024-01-15T10:30:00.123456789Z").unwrap();
+        assert_eq!(ts.seconds, 1705314600);
+        assert_eq!(ts.nanos, 123456789);
+    }
+
+    #[test]
+    fn parse_rfc3339_with_offset() {
+        let ts = parse_rfc3339("2024-01-15T10:30:00+08:00").unwrap();
+        // 10:30 +08:00 = 02:30 UTC
+        assert_eq!(ts.seconds, 1705285800);
+    }
+
+    #[test]
+    fn parse_rfc3339_empty_returns_none() {
+        assert!(parse_rfc3339("").is_none());
+    }
+
+    #[test]
+    fn parse_rfc3339_invalid_returns_none() {
+        assert!(parse_rfc3339("not-a-date").is_none());
+        assert!(parse_rfc3339("2024-13-01T00:00:00Z").is_none());
+    }
+
+    // ── zitadel_user_to_proto ────────────────────────────────────────
+
+    #[test]
+    fn zitadel_user_to_proto_full_fields() {
+        let zu = ZitadelUser {
+            user_id: "12345".to_string(),
+            human: Some(ZitadelHuman {
+                profile: Some(ZitadelProfile {
+                    given_name: "John".to_string(),
+                    family_name: "Doe".to_string(),
+                }),
+                email: Some(ZitadelEmail {
+                    email: "john@example.com".to_string(),
+                }),
+            }),
+            details: Some(ZitadelResourceDetails {
+                creation_date: "2024-01-15T10:30:00Z".to_string(),
+                change_date: "2024-06-01T12:00:00Z".to_string(),
+            }),
+        };
+
+        let user = UserServiceImpl::zitadel_user_to_proto(&zu);
+        assert_eq!(user.id, "12345");
+        assert_eq!(user.name, "John Doe");
+        assert_eq!(user.email, "john@example.com");
+        assert!(user.created_at.is_some());
+        assert!(user.updated_at.is_some());
+    }
+
+    #[test]
+    fn zitadel_user_to_proto_minimal_fields() {
+        let zu = ZitadelUser {
+            user_id: "99999".to_string(),
+            human: None,
+            details: None,
+        };
+
+        let user = UserServiceImpl::zitadel_user_to_proto(&zu);
+        assert_eq!(user.id, "99999");
+        assert_eq!(user.name, "");
+        assert_eq!(user.email, "");
+        assert!(user.created_at.is_none());
+        assert!(user.updated_at.is_none());
+    }
+
+    // ── Zitadel JSON deserialization ─────────────────────────────────
+
+    #[test]
+    fn deserialize_zitadel_user_response() {
+        let json = r#"{
+            "user": {
+                "userId": "abc123",
+                "human": {
+                    "profile": { "givenName": "Alice", "familyName": "Smith" },
+                    "email": { "email": "alice@test.com" }
+                },
+                "details": {
+                    "creationDate": "2024-01-01T00:00:00Z",
+                    "changeDate": "2024-06-01T00:00:00Z"
+                }
+            }
+        }"#;
+
+        let resp: ZitadelUserResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.user.user_id, "abc123");
+        assert_eq!(
+            resp.user.human.as_ref().unwrap().profile.as_ref().unwrap().given_name,
+            "Alice"
+        );
+    }
+
+    #[test]
+    fn deserialize_zitadel_list_response_empty() {
+        let json = r#"{ "details": { "totalResult": 0 } }"#;
+        let resp: ZitadelListUsersResponse = serde_json::from_str(json).unwrap();
+        assert!(resp.result.is_empty());
+        assert_eq!(resp.details.total_result, 0);
+    }
+}

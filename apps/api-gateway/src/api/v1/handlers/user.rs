@@ -106,3 +106,71 @@ pub async fn get_current_user(user: IntrospectedUser, client: UserGrpcClient) ->
 
     Ok(HttpResponse::Ok().json(ApiResponse::new(proto_user_to_dto(proto_user))))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rpc_proto::user::v1::User as ProtoUser;
+
+    #[test]
+    fn timestamp_to_datetime_valid() {
+        let ts = prost_types::Timestamp {
+            seconds: 1705314600,
+            nanos: 0,
+        };
+        let dt = timestamp_to_datetime(Some(ts));
+        assert_eq!(dt.to_rfc3339(), "2024-01-15T10:30:00+00:00");
+    }
+
+    #[test]
+    fn timestamp_to_datetime_with_nanos() {
+        let ts = prost_types::Timestamp {
+            seconds: 1705314600,
+            nanos: 500_000_000,
+        };
+        let dt = timestamp_to_datetime(Some(ts));
+        assert_eq!(dt.timestamp(), 1705314600);
+        assert_eq!(dt.timestamp_subsec_nanos(), 500_000_000);
+    }
+
+    #[test]
+    fn timestamp_to_datetime_none_returns_epoch() {
+        let dt = timestamp_to_datetime(None);
+        assert_eq!(dt.timestamp(), 0);
+    }
+
+    #[test]
+    fn proto_user_to_dto_maps_fields() {
+        let proto = ProtoUser {
+            id: "u123".to_string(),
+            email: "test@example.com".to_string(),
+            name: "Test User".to_string(),
+            created_at: Some(prost_types::Timestamp {
+                seconds: 1705314600,
+                nanos: 0,
+            }),
+            updated_at: None,
+        };
+
+        let dto = proto_user_to_dto(proto);
+        assert_eq!(dto.id, "u123");
+        assert_eq!(dto.email, "test@example.com");
+        assert_eq!(dto.name, "Test User");
+        assert_eq!(dto.created_at.timestamp(), 1705314600);
+    }
+
+    #[test]
+    fn proto_user_to_dto_empty_timestamps() {
+        let proto = ProtoUser {
+            id: "u0".to_string(),
+            email: String::new(),
+            name: String::new(),
+            created_at: None,
+            updated_at: None,
+        };
+
+        let dto = proto_user_to_dto(proto);
+        assert_eq!(dto.id, "u0");
+        assert_eq!(dto.created_at.timestamp(), 0); // epoch fallback
+    }
+}

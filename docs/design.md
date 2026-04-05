@@ -16,8 +16,8 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 
 - **Language:** Rust (2021 edition)
 - **HTTP Framework:** Actix-web (api-gateway)
-- **gRPC Framework:** Tonic (domain services)
-- **Serialization:** Protobuf (service-to-service), JSON (external API)
+- **gRPC Framework:** Tonic 0.14 (domain services)
+- **Serialization:** Protobuf with prost 0.14 (service-to-service), JSON (external API)
 - **Build System:** Cargo workspace
 - **Identity Provider:** Zitadel Cloud (OIDC Token Introspection)
 
@@ -39,13 +39,13 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
                     │   api-gateway   │  :8080
                     │   (Actix-web)   │
                     │  Token Introsp. │
-                    └────────┬────────┘
-                             │ gRPC
-                    ┌────────▼────────┐
-                    │  user-service   │
-                    │    (Tonic)      │  :50052
-                    │  Zitadel Proxy  │
-                    └─────────────────┘
+                    │  gRPC Client    │───── user-service gRPC ─────┐
+                    └────────┬────────┘                             │
+                             │                              ┌───────▼───────┐
+                             │                              │ user-service  │
+                             │                              │   (Tonic)     │  :50051
+                             │                              │ Zitadel Proxy │
+                             │                              └───────────────┘
 ```
 
 ### Authentication Flow
@@ -53,19 +53,20 @@ PIM is a Rust microservices monorepo following the **1 × HTTP Gateway + N × gR
 1. **Clients** (Tauri mobile app, React admin panel) authenticate directly with Zitadel Cloud using Authorization Code + PKCE flow
 2. **API Gateway** receives Bearer tokens and validates them via Zitadel's Token Introspection endpoint using the `zitadel` crate's `IntrospectedUser` actix extractor
 3. **Protected handlers** include `IntrospectedUser` as a function parameter — no custom middleware needed
-4. **user-service** proxies user queries to Zitadel's Management REST API v2
+4. **Gateway proxies** user requests to user-service over gRPC, passing the authenticated user ID
+5. **user-service** proxies user queries to Zitadel's Management REST API v2 using a service account PAT
 
 ### Layer Responsibilities
 
-| Layer          | Crate                  | Purpose                                       |
-| -------------- | ---------------------- | --------------------------------------------- |
-| Contract       | `proto/`               | Protobuf definitions (SSoT)                   |
-| Boundary       | `libs/rpc-proto`       | Generated gRPC code only                      |
-| Authentication | `libs/infra-auth`      | Zitadel OIDC re-exports (IntrospectedUser)    |
-| Configuration  | `libs/infra-config`    | Config loading & environment                  |
-| Observability  | `libs/infra-telemetry` | Metrics, tracing primitives                   |
-| Gateway        | `apps/api-gateway`     | HTTP↔gRPC translation, token introspection    |
-| Domain         | `apps/*-service`       | Business logic per domain (Zitadel API proxy) |
+| Layer          | Crate                  | Purpose                                              |
+| -------------- | ---------------------- | ---------------------------------------------------- |
+| Contract       | `proto/`               | Protobuf definitions (SSoT)                          |
+| Boundary       | `libs/rpc-proto`       | Generated gRPC code only (tonic-prost-build)         |
+| Authentication | `libs/infra-auth`      | Zitadel OIDC re-exports (IntrospectedUser)           |
+| Configuration  | `libs/infra-config`    | Config loading & environment                         |
+| Observability  | `libs/infra-telemetry` | Metrics (re-exports `metrics` crate), tracing, gRPC/HTTP metric layers |
+| Gateway        | `apps/api-gateway`     | HTTP→gRPC translation, token introspection           |
+| Domain         | `apps/*-service`       | Business logic per domain (Zitadel API proxy)        |
 
 ### Dependency Direction
 
@@ -82,7 +83,7 @@ Reverse dependencies are **FORBIDDEN**.
 
 ## 3. Domain Services
 
-### user-service (:50052)
+### user-service (:50051)
 
 **Responsibility:** User data management — proxies to Zitadel Management REST API v2
 
@@ -96,6 +97,14 @@ Reverse dependencies are **FORBIDDEN**.
 
 **Authentication to Zitadel:** Service account Personal Access Token (PAT)
 
+**Security measures:**
+- User ID format validation (`validate_user_id`) — only alphanumeric IDs accepted to prevent SSRF
+- Generic gRPC error messages — internal details logged but not exposed to callers
+- Credentials redacted in Debug output
+- HTTP client configured with connect (5s) and request (10s) timeouts
+
+**Data mapping:** Typed `serde::Deserialize` structs for Zitadel v2 JSON responses (`ZitadelUser`, `ZitadelHuman`, `ZitadelProfile`, etc.) mapped to proto `User` with `google.protobuf.Timestamp` fields.
+
 ---
 
 ## 4. API Design
@@ -106,17 +115,21 @@ Reverse dependencies are **FORBIDDEN**.
 | ------ | ------------------------- | ------------- | -------------------------- |
 | GET    | `/health`                 | No            | Health check               |
 | GET    | `/api/v1/auth/userinfo`   | Yes           | Current user info (token)  |
-| GET    | `/api/v1/users`           | Yes           | List users                 |
-| GET    | `/api/v1/users/{id}`      | Yes           | Get user by ID             |
-| GET    | `/api/v1/users/me`        | Yes           | Current user (full record) |
+| GET    | `/api/v1/users`           | Yes           | List users (via gRPC)      |
+| GET    | `/api/v1/users/{id}`      | Yes           | Get user by ID (via gRPC)  |
+| GET    | `/api/v1/users/me`        | Yes           | Current user (via gRPC)    |
 
 Authentication is handled by the `IntrospectedUser` extractor from the `zitadel` crate. Handlers that include this extractor automatically require a valid Bearer token. Handlers without it (e.g., `/health`) are public.
+
+### gRPC Client Integration
+
+The gateway establishes a `UserServiceClient<Channel>` connection at startup and shares it across handlers via `actix_web::web::Data`. Proto `User` messages (with `prost_types::Timestamp`) are converted to gateway DTOs (`UserResponse` with `chrono::DateTime<Utc>`) before returning JSON.
 
 ### gRPC APIs
 
 Defined in `proto/` directory:
 
-- `proto/user/v1/user.proto`
+- `proto/user/v1/user.proto` — Uses `google.protobuf.Timestamp` for temporal fields
 
 ---
 
@@ -140,11 +153,21 @@ All services use a **shared configuration loader** from `libs/infra-config` that
 **Examples:**
 
 - `APP__APP__HOST=0.0.0.0` → `app.host`
+- `APP__APP__USER_SERVICE_URL=http://user-svc:50051` → `app.user_service_url`
 - `APP__ZITADEL__AUTHORITY=https://my.zitadel.cloud` → `zitadel.authority`
 - `APP__ZITADEL__CLIENT_ID=my-client-id` → `zitadel.client_id`
 - `APP__ZITADEL__CLIENT_SECRET=my-secret` → `zitadel.client_secret`
 - `USER_SERVICE__ZITADEL_AUTHORITY=https://my.zitadel.cloud` → `zitadel_authority`
 - `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN=pat-xxx` → `zitadel_service_account_token`
+
+### Gateway-specific Settings
+
+| Setting              | Default                    | Description                     |
+| -------------------- | -------------------------- | ------------------------------- |
+| `app.user_service_url` | `http://127.0.0.1:50051` | gRPC endpoint of user-service  |
+| `app.host`           | `127.0.0.1`                | HTTP bind host                  |
+| `app.port`           | `8080`                     | HTTP bind port                  |
+| `app.metrics_port`   | `60080`                    | Prometheus metrics port         |
 
 ### TOML Files
 
@@ -172,11 +195,28 @@ For detailed usage and migration notes, see [`docs/configuration.md`](./configur
 
 ---
 
-## 6. Future Evolution
+## 6. Observability
+
+### Metrics
+
+- `infra-telemetry` re-exports the `metrics` crate under `#[cfg(feature = "prometheus")]`
+- All workspace crates MUST use `infra_telemetry::metrics` instead of depending on `metrics` directly (prevents version conflicts)
+- Gateway: HTTP metrics via `HttpMetrics` middleware
+- user-service: gRPC metrics via `GrpcMetricsLayer`
+
+### Tracing
+
+- Structured logging via `tracing` + `tracing-subscriber`
+- Credentials are never logged (custom `Debug` impls on `Settings` structs)
+
+---
+
+## 7. Future Evolution
 
 - [ ] Database integration (per-service ownership)
-- [ ] API Gateway → gRPC client integration (currently handlers use placeholder data)
 - [ ] Health checks / readiness probes
 - [ ] Buf linting for proto changes
-- [ ] Service mesh / observability
+- [ ] Service mesh / observability dashboards
 - [x] ~~External identity provider integration~~ (Zitadel Cloud — implemented)
+- [x] ~~API Gateway → gRPC client integration~~ (implemented)
+- [x] ~~Unified tonic/prost versions~~ (0.14)
