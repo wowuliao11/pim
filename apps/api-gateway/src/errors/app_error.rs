@@ -2,18 +2,12 @@ use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use thiserror::Error;
 
 use super::ErrorResponse;
-use super::{AuthError, UserError, ValidationError};
+use super::UserError;
 
 /// Application error types
 /// Maps to appropriate HTTP status codes and error responses
 #[derive(Debug, Error)]
 pub enum AppError {
-    #[error(transparent)]
-    Validation(#[from] ValidationError),
-
-    #[error(transparent)]
-    Auth(#[from] AuthError),
-
     #[error(transparent)]
     User(#[from] UserError),
 
@@ -24,8 +18,6 @@ pub enum AppError {
 impl AppError {
     pub fn kind(&self) -> &'static str {
         match self {
-            Self::Validation(_) => "validation",
-            Self::Auth(_) => "auth",
             Self::User(_) => "user",
             Self::Internal(_) => "internal",
         }
@@ -35,8 +27,6 @@ impl AppError {
 impl ResponseError for AppError {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::Validation(_) => StatusCode::BAD_REQUEST,
-            Self::Auth(_) => StatusCode::UNAUTHORIZED,
             Self::User(UserError::NotFound { .. }) => StatusCode::NOT_FOUND,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

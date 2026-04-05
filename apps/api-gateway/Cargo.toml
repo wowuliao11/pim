@@ -12,6 +12,11 @@ path = "src/main.rs"
 infra-config = { path = "../../libs/infra-config" }
 infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus", "http"] }
 infra-auth = { path = "../../libs/infra-auth" }
+rpc-proto = { path = "../../libs/rpc-proto" }
+
+# gRPC client
+tonic.workspace = true
+prost-types.workspace = true
 
 # External dependencies
 actix-web.workspace = true
@@ -27,6 +32,3 @@ uuid.workspace = true
 chrono.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
-
-# Metrics facade
-metrics = "0.24.3"

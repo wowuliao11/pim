@@ -1,14 +1,26 @@
+use std::fmt;
+
 use infra_config::CommonConfig;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct Settings {
     #[serde(flatten)]
     pub common: CommonConfig,
 
     pub app: AppSettings,
-    pub db: DbSettings,
     pub zitadel: ZitadelSettings,
+}
+
+// Manual Debug impl to avoid leaking secrets
+impl fmt::Debug for Settings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Settings")
+            .field("common", &self.common)
+            .field("app", &self.app)
+            .field("zitadel", &self.zitadel)
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -17,6 +29,13 @@ pub struct AppSettings {
     pub port: u16,
     pub metrics_port: u16,
     pub name: String,
+    /// gRPC endpoint of the user-service, e.g. "http://127.0.0.1:50051"
+    #[serde(default = "default_user_service_url")]
+    pub user_service_url: String,
+}
+
+fn default_user_service_url() -> String {
+    "http://127.0.0.1:50051".to_string()
 }
 
 impl Default for AppSettings {
@@ -26,24 +45,12 @@ impl Default for AppSettings {
             port: 8080,
             metrics_port: 60080,
             name: env!("CARGO_PKG_NAME").to_string(),
+            user_service_url: default_user_service_url(),
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct DbSettings {
-    pub url: String,
-}
-
-impl Default for DbSettings {
-    fn default() -> Self {
-        Self {
-            url: "postgres://localhost/pim".to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ZitadelSettings {
     /// Zitadel instance URL, e.g. "https://my-instance.zitadel.cloud"
     pub authority: String,
@@ -51,6 +58,17 @@ pub struct ZitadelSettings {
     pub client_id: String,
     /// API application client secret (for token introspection)
     pub client_secret: String,
+}
+
+// Manual Debug impl: mask client_secret to prevent leaking credentials in logs
+impl fmt::Debug for ZitadelSettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ZitadelSettings")
+            .field("authority", &self.authority)
+            .field("client_id", &self.client_id)
+            .field("client_secret", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl Default for ZitadelSettings {
