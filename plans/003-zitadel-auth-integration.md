@@ -1002,7 +1002,7 @@ git commit -m "docs: update design and configuration for Zitadel auth integratio
 
 | Phase | Status |
 |-------|--------|
-| Phase 1: Gateway Token Introspection | Not Started |
-| Phase 2: Remove auth-service | Not Started |
-| Phase 3: User Service -> Zitadel Proxy | Not Started |
-| Phase 4: Documentation & Cleanup | Not Started |
+| Phase 1: Gateway Token Introspection | Complete |
+| Phase 2: Remove auth-service | Complete |
+| Phase 3: User Service -> Zitadel Proxy | Complete |
+| Phase 4: Documentation & Cleanup | Complete |

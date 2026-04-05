@@ -58,21 +58,23 @@ We use **double underscores (`__`)** as the nesting separator for structured con
 
 ### Examples
 
-| Field Path             | Environment Variable                 | Example Value   |
-| ---------------------- | ------------------------------------ | --------------- |
-| `app_env`              | `APP__APP_ENV`                       | `prod`          |
-| `log_level`            | `APP__LOG_LEVEL`                     | `debug`         |
-| `app.host`             | `APP__APP__HOST`                     | `0.0.0.0`       |
-| `app.port`             | `APP__APP__PORT`                     | `8080`          |
-| `jwt_secret`           | `AUTH_SERVICE__JWT_SECRET`           | `my-secret-key` |
-| `jwt_expiration_hours` | `AUTH_SERVICE__JWT_EXPIRATION_HOURS` | `48`            |
+| Field Path                       | Environment Variable                              | Example Value                         |
+| -------------------------------- | ------------------------------------------------- | ------------------------------------- |
+| `app_env`                        | `APP__APP_ENV`                                    | `prod`                                |
+| `log_level`                      | `APP__LOG_LEVEL`                                  | `debug`                               |
+| `app.host`                       | `APP__APP__HOST`                                  | `0.0.0.0`                             |
+| `app.port`                       | `APP__APP__PORT`                                  | `8080`                                |
+| `zitadel.authority`              | `APP__ZITADEL__AUTHORITY`                         | `https://my-instance.zitadel.cloud`   |
+| `zitadel.client_id`             | `APP__ZITADEL__CLIENT_ID`                         | `123456789@my-project`                |
+| `zitadel.client_secret`         | `APP__ZITADEL__CLIENT_SECRET`                     | `secret-value`                        |
+| `zitadel_authority`              | `USER_SERVICE__ZITADEL_AUTHORITY`                 | `https://my-instance.zitadel.cloud`   |
+| `zitadel_service_account_token` | `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN`     | `pat-xxx`                             |
 
 ### Service-Specific Prefixes
 
 | Service      | Prefix         | Config File Path                |
 | ------------ | -------------- | ------------------------------- |
 | api-gateway  | `APP`          | `apps/api-gateway/config.toml`  |
-| auth-service | `AUTH_SERVICE` | `apps/auth-service/config.toml` |
 | user-service | `USER_SERVICE` | `apps/user-service/config.toml` |
 
 ## Configuration File Workflow
@@ -81,7 +83,7 @@ We use **double underscores (`__`)** as the nesting separator for structured con
 
 1. **Clone the repository** and navigate to a service directory
 2. **Copy the template**: `cp config.example.toml config.toml`
-3. **Customize** `config.toml` with your local settings (database URLs, secrets, etc.)
+3. **Customize** `config.toml` with your local settings (Zitadel credentials, database URLs, etc.)
 4. **Never commit** `config.toml` (it's in `.gitignore`)
 
 ### For Production/CI/CD
@@ -103,17 +105,19 @@ log_level = "info"
 [app]
 host = "127.0.0.1"
 port = 8080
+metrics_port = 60080
 name = "api-gateway"
 
 [db]
 url = "postgres://localhost/pim"
 
-[jwt]
-secret = "your-secret-key-change-in-production"
-expiration_hours = 24
+[zitadel]
+authority = "https://my-instance.zitadel.cloud"
+client_id = "your-api-app-client-id@your-project"
+client_secret = "your-api-app-client-secret"
 ```
 
-### auth-service (`apps/auth-service/config.example.toml`)
+### user-service (`apps/user-service/config.example.toml`)
 
 ```toml
 # Common fields
@@ -122,11 +126,32 @@ log_level = "info"
 
 # Service-specific fields
 host = "127.0.0.1"
-port = 50051
-metrics_port = 60051
-jwt_secret = "your-secret-key-change-in-production"
-jwt_expiration_hours = 24
+port = 50052
+metrics_port = 60052
+zitadel_authority = "https://my-instance.zitadel.cloud"
+zitadel_service_account_token = "your-service-account-pat"
 ```
+
+## Zitadel Configuration
+
+### API Gateway (Token Introspection)
+
+The API Gateway validates incoming Bearer tokens by calling Zitadel's Token Introspection endpoint. This requires an **API application** in Zitadel with Basic Auth credentials:
+
+| Setting         | Description                                    | Env Var                        |
+| --------------- | ---------------------------------------------- | ------------------------------ |
+| `authority`     | Zitadel instance URL                           | `APP__ZITADEL__AUTHORITY`      |
+| `client_id`     | API application client ID                      | `APP__ZITADEL__CLIENT_ID`      |
+| `client_secret` | API application client secret                  | `APP__ZITADEL__CLIENT_SECRET`  |
+
+### User Service (Management API Proxy)
+
+The user-service proxies user CRUD operations to Zitadel's Management REST API v2. This requires a **service account** with a Personal Access Token (PAT):
+
+| Setting                      | Description                          | Env Var                                           |
+| ---------------------------- | ------------------------------------ | ------------------------------------------------- |
+| `zitadel_authority`          | Zitadel instance URL                 | `USER_SERVICE__ZITADEL_AUTHORITY`                 |
+| `zitadel_service_account_token` | Service account PAT               | `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN`     |
 
 ## Usage in Services
 
@@ -166,8 +191,6 @@ pub fn load_settings() -> Result<Settings, ConfigError> {
 }
 ```
 
-````
-
 ### Step 3: Use in Main
 
 ```rust
@@ -180,7 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Log level: {}", settings.common.log_level);
     Ok(())
 }
-````
+```
 
 ## libs/infra-config and libs/infra-telemetry
 
@@ -214,42 +237,11 @@ infra-telemetry = { path = "../../libs/infra-telemetry", features = ["prometheus
 
 **Note**: By default, no features are enabled (`default = []`). Services must explicitly opt-in.
 
-## Migration from Old Configuration System
-
-### Key Changes
-
-1. **Compositional config**: Use `#[serde(flatten)]` to include `CommonConfig` instead of duplicating fields
-2. **Per-service prefix**: `load_config` now accepts a custom prefix (e.g., `"AUTH_SERVICE"`) instead of hardcoded `"APP"`
-3. **Single config file**: Changed from `load_config("APP", &["config/default", "config/local"])` to `load_config("AUTH_SERVICE", "config.toml")`
-4. **Config location**: Files moved from `config/service-name.toml` to `apps/service-name/config.toml`
-5. **Git workflow**: Only `.example.toml` files are tracked; real `config.toml` is ignored
-
-### Breaking Changes
-
-If you previously used:
-
-```bash
-export AUTH_SERVICE_JWT_SECRET="my-secret"  # Old: single underscore
-```
-
-You now need:
-
-```bash
-export AUTH_SERVICE__JWT_SECRET="my-secret"  # New: double underscore
-```
-
-For nested fields (e.g., `app.host`), double underscores are required:
-
-```bash
-export APP__APP__HOST="0.0.0.0"  # Correct
-export APP_APP_HOST="0.0.0.0"    # Incorrect
-```
-
 ## Production Deployment Checklist
 
 - [ ] Copy `config.example.toml` to `config.toml` for each service
 - [ ] Set all required environment variables with service-specific prefixes
-- [ ] Ensure JWT secrets are rotated from default values
+- [ ] Configure Zitadel credentials (API app client ID/secret for gateway, service account PAT for user-service)
 - [ ] Validate database URLs and credentials
 - [ ] Set `APP_ENV=production` (or via `<SERVICE>__APP_ENV=production`)
 - [ ] Do not commit `config.toml` files containing secrets to version control
@@ -258,10 +250,10 @@ export APP_APP_HOST="0.0.0.0"    # Incorrect
 
 ### Configuration not loading from environment variables
 
-1. Check prefix matches your service: `APP`, `AUTH_SERVICE`, or `USER_SERVICE`
-2. Use `__` (double underscore) for nested fields: `APP__JWT__SECRET`, not `APP_JWT_SECRET`
-3. Use `__` for flattened common fields: `AUTH_SERVICE__APP_ENV`, `AUTH_SERVICE__LOG_LEVEL`
-4. Verify environment variables are exported: `printenv | grep AUTH_SERVICE__`
+1. Check prefix matches your service: `APP` or `USER_SERVICE`
+2. Use `__` (double underscore) for nested fields: `APP__ZITADEL__AUTHORITY`, not `APP_ZITADEL_AUTHORITY`
+3. Use `__` for flattened common fields: `USER_SERVICE__APP_ENV`, `USER_SERVICE__LOG_LEVEL`
+4. Verify environment variables are exported: `printenv | grep APP__`
 
 ### Service fails to start with "Failed to load configuration"
 
@@ -269,6 +261,13 @@ export APP_APP_HOST="0.0.0.0"    # Incorrect
 2. Validate TOML syntax if using config files
 3. Ensure `Default` trait provides valid fallback values
 4. Check service logs for detailed deserialization errors
+
+### Gateway fails with "Failed to build Zitadel introspection config"
+
+1. Verify `zitadel.authority` points to a valid Zitadel instance
+2. Check that the Zitadel instance is reachable from the gateway
+3. Verify `client_id` and `client_secret` are correct (API application credentials)
+4. Ensure the Zitadel instance's OIDC discovery endpoint (`/.well-known/openid-configuration`) is accessible
 
 ### Config values not overriding as expected
 

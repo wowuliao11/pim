@@ -19,3 +19,11 @@ log_level = "info"
 host = "127.0.0.1"
 port = 50052
 metrics_port = 60052
+
+# ============================================================
+# Zitadel Management API Configuration
+# ============================================================
+# IMPORTANT: Replace these with your actual Zitadel credentials!
+# Create a service account in Zitadel and generate a Personal Access Token (PAT).
+zitadel_authority = "https://my-instance.zitadel.cloud"
+zitadel_service_account_token = "your-service-account-pat"
