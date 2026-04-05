@@ -11,13 +11,6 @@
 //! - Helpers / mappers / validators
 //! - Any non-generated code beyond re-exports
 
-/// Auth service proto definitions
-pub mod auth {
-    pub mod v1 {
-        tonic::include_proto!("auth.v1");
-    }
-}
-
 /// User service proto definitions
 pub mod user {
     pub mod v1 {

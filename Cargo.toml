@@ -27,8 +27,9 @@ tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 async-trait = "0.1"
 
-# Security
-jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
+# Authentication (Zitadel OIDC)
+zitadel = { version = "5", features = ["actix", "oidc", "credentials"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 # Error Handling
 thiserror = "2.0.17"

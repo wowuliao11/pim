@@ -3,7 +3,6 @@ use super::Settings;
 use config;
 
 /// Application configuration wrapper
-/// Provides convenient methods for accessing configuration values
 #[derive(Clone)]
 pub struct AppConfig {
     pub settings: Settings,
@@ -14,28 +13,27 @@ impl AppConfig {
         Self { settings }
     }
 
-    /// Get the bind address for the HTTP server
     pub fn bind_address(&self) -> String {
         format!("{}:{}", self.settings.app.host, self.settings.app.port)
     }
 
-    /// Get the application name
     pub fn app_name(&self) -> &str {
         &self.settings.app.name
     }
 
-    /// Get JWT secret
-    pub fn jwt_secret(&self) -> &str {
-        &self.settings.jwt.secret
+    pub fn zitadel_authority(&self) -> &str {
+        &self.settings.zitadel.authority
     }
 
-    /// Get JWT expiration in hours
-    pub fn jwt_expiration_hours(&self) -> i64 {
-        self.settings.jwt.expiration_hours
+    pub fn zitadel_client_id(&self) -> &str {
+        &self.settings.zitadel.client_id
+    }
+
+    pub fn zitadel_client_secret(&self) -> &str {
+        &self.settings.zitadel.client_secret
     }
 }
 
-/// Load application configuration from environment and config files
 pub fn load_app_config() -> Result<AppConfig, config::ConfigError> {
     let settings = load_settings()?;
     Ok(AppConfig::new(settings))

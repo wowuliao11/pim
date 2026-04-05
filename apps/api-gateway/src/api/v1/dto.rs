@@ -1,34 +1,15 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 // ============ Auth DTOs ============
 
-#[derive(Debug, Deserialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
-
 #[derive(Debug, Serialize)]
-pub struct LoginResponse {
-    pub access_token: String,
-    pub token_type: String,
-    pub expires_in: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RegisterRequest {
-    pub email: String,
-    pub password: String,
-    pub name: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct RegisterResponse {
-    pub id: String,
-    pub email: String,
-    pub name: String,
-    pub created_at: DateTime<Utc>,
+pub struct UserInfoResponse {
+    pub user_id: String,
+    pub username: Option<String>,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub email_verified: Option<bool>,
 }
 
 // ============ User DTOs ============

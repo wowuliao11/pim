@@ -8,7 +8,7 @@ pub struct Settings {
 
     pub app: AppSettings,
     pub db: DbSettings,
-    pub jwt: JwtSettings,
+    pub zitadel: ZitadelSettings,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -44,16 +44,21 @@ impl Default for DbSettings {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct JwtSettings {
-    pub secret: String,
-    pub expiration_hours: i64,
+pub struct ZitadelSettings {
+    /// Zitadel instance URL, e.g. "https://my-instance.zitadel.cloud"
+    pub authority: String,
+    /// API application client ID (for token introspection)
+    pub client_id: String,
+    /// API application client secret (for token introspection)
+    pub client_secret: String,
 }
 
-impl Default for JwtSettings {
+impl Default for ZitadelSettings {
     fn default() -> Self {
         Self {
-            secret: "your-secret-key-change-in-production".to_string(),
-            expiration_hours: 24,
+            authority: "https://localhost.zitadel.cloud".to_string(),
+            client_id: "change-me".to_string(),
+            client_secret: "change-me".to_string(),
         }
     }
 }

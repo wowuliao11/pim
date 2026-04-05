@@ -1,68 +1,20 @@
-use actix_web::{web, HttpResponse};
+use actix_web::HttpResponse;
 
-use anyhow::Context;
-use infra_auth::JwtManager;
+use infra_auth::IntrospectedUser;
 
-use crate::api::v1::dto::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
-use crate::config::AppConfig;
-use crate::errors::{AppError, ValidationError};
+use crate::api::v1::dto::{ApiResponse, UserInfoResponse};
 
-/// POST /api/v1/auth/login
-/// Authenticate user and return JWT token
-pub async fn login(
-    body: web::Json<LoginRequest>,
-    config: web::Data<AppConfig>,
-    jwt_manager: web::Data<JwtManager>,
-) -> Result<HttpResponse, AppError> {
-    // TODO: Validate credentials against database
-    // This is a placeholder implementation
-
-    if body.email.is_empty() || body.password.is_empty() {
-        return Err(ValidationError::MissingCredentials.into());
-    }
-
-    let token = jwt_manager
-        .generate_token(
-            &body.email, // In real app, use user ID from database
-            vec!["user".to_string()],
-        )
-        .context("Failed to generate token")?;
-
-    let response = LoginResponse {
-        access_token: token,
-        token_type: "Bearer".to_string(),
-        expires_in: config.jwt_expiration_hours() * 3600,
+/// GET /api/v1/auth/userinfo
+/// Returns the authenticated user's info from the Zitadel introspection response.
+/// Requires a valid Bearer token.
+pub async fn userinfo(user: IntrospectedUser) -> HttpResponse {
+    let response = UserInfoResponse {
+        user_id: user.user_id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        email_verified: user.email_verified,
     };
 
-    Ok(HttpResponse::Ok().json(ApiResponse::new(response)))
-}
-
-/// POST /api/v1/auth/register
-/// Register a new user
-pub async fn register(body: web::Json<RegisterRequest>) -> Result<HttpResponse, AppError> {
-    // TODO: Implement actual user registration with database
-    // This is a placeholder implementation
-
-    if body.email.is_empty() || body.password.is_empty() || body.name.is_empty() {
-        return Err(ValidationError::MissingRegistrationFields.into());
-    }
-
-    // Validate email format
-    if !body.email.contains('@') {
-        return Err(ValidationError::InvalidEmail.into());
-    }
-
-    // Validate password strength
-    if body.password.len() < 8 {
-        return Err(ValidationError::WeakPassword { min_len: 8 }.into());
-    }
-
-    let response = RegisterResponse {
-        id: uuid::Uuid::new_v4().to_string(),
-        email: body.email.clone(),
-        name: body.name.clone(),
-        created_at: chrono::Utc::now(),
-    };
-
-    Ok(HttpResponse::Created().json(ApiResponse::new(response)))
+    HttpResponse::Ok().json(ApiResponse::new(response))
 }
