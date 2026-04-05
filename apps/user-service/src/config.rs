@@ -10,6 +10,11 @@ pub struct Settings {
     pub host: String,
     pub port: u16,
     pub metrics_port: u16,
+
+    /// Zitadel instance URL, e.g. "https://my-instance.zitadel.cloud"
+    pub zitadel_authority: String,
+    /// Zitadel service account personal access token (PAT)
+    pub zitadel_service_account_token: String,
 }
 
 impl Default for Settings {
@@ -19,6 +24,8 @@ impl Default for Settings {
             host: "127.0.0.1".to_string(),
             port: 50052,
             metrics_port: 60052,
+            zitadel_authority: "https://localhost.zitadel.cloud".to_string(),
+            zitadel_service_account_token: "change-me".to_string(),
         }
     }
 }

@@ -51,7 +51,8 @@ message ListUsersResponse {
 }
 
 message GetCurrentUserRequest {
-  // User ID is extracted from the authentication context
+  // User ID passed from the API gateway (extracted from token introspection)
+  string user_id = 1;
 }
 
 message GetCurrentUserResponse {
