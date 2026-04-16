@@ -1,0 +1,12 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # go_package is set for potential Go consumers; not required for Rust-only
+    - PACKAGE_NO_IMPORT_CYCLE
+breaking:
+  use:
+    - FILE

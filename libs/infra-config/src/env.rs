@@ -6,13 +6,25 @@ use std::str::FromStr;
 ///
 /// Determines runtime behavior, logging format, and default log levels.
 /// Load from APP_ENV environment variable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AppEnv {
     #[default]
     Development,
     Staging,
     Production,
+}
+
+// Custom deserializer to accept both full names and abbreviations
+// e.g., "development" or "dev", "production" or "prod", "staging" or "stage"
+impl<'de> Deserialize<'de> for AppEnv {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse::<AppEnv>().map_err(serde::de::Error::custom)
+    }
 }
 
 impl AppEnv {

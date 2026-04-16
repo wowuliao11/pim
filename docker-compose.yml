@@ -1,0 +1,24 @@
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: user-service
+    ports:
+      - "50051:50051"
+    env_file:
+      - apps/user-service/.env
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: api-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - apps/api-gateway/.env
+    depends_on:
+      - user-service

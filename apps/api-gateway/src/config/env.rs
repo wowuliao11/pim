@@ -19,6 +19,6 @@ mod tests {
     #[test]
     fn test_load_default_settings() {
         let settings = load_settings();
-        assert!(settings.is_ok());
+        assert!(settings.is_ok(), "Failed to load settings: {:?}", settings.err());
     }
 }

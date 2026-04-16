@@ -37,3 +37,19 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: buf-lint
+        name: buf lint (proto)
+        entry: buf lint
+        language: system
+        files: \.proto$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: buf-format
+        name: buf format (proto)
+        entry: buf format --diff --exit-code
+        language: system
+        files: \.proto$
+        pass_filenames: false
+        stages: [pre-commit]
