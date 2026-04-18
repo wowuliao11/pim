@@ -1,0 +1,40 @@
+name: PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional-commit:
+    name: Conventional Commit
+    runs-on: ubuntu-latest
+    steps:
+      # Enforces Conventional Commits on PR titles. Combined with a
+      # squash-merge policy (PR title -> main commit message), this keeps
+      # release-please able to parse every merge into main and prevents
+      # the "commit could not be parsed" warnings from recurring.
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            revert
+            docs
+            style
+            test
+            build
+            ci
+            chore
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.

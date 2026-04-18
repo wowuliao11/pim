@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "rust",
+  "include-component-in-tag": false,
+  "separate-pull-requests": false,
+  "plugins": [
+    "cargo-workspace",
+    {
+      "type": "linked-versions",
+      "groupName": "pim",
+      "components": [
+        "api-gateway",
+        "user-service",
+        "infra-auth",
+        "infra-config",
+        "infra-telemetry",
+        "rpc-proto",
+        "pim-bootstrap"
+      ]
+    }
+  ],
+  "packages": {
+    "apps/api-gateway": {
+      "component": "api-gateway"
+    },
+    "apps/user-service": {
+      "component": "user-service"
+    },
+    "libs/infra-auth": {
+      "component": "infra-auth"
+    },
+    "libs/infra-config": {
+      "component": "infra-config"
+    },
+    "libs/infra-telemetry": {
+      "component": "infra-telemetry"
+    },
+    "libs/rpc-proto": {
+      "component": "rpc-proto"
+    },
+    "tools/pim-bootstrap": {
+      "component": "pim-bootstrap"
+    }
+  }
+}
