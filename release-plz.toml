@@ -25,5 +25,5 @@ semver_check = false
 name = "api-gateway"
 git_tag_enable = true
 git_release_enable = true
-tag_name = "v{{ version }}"
+git_tag_name = "v{{ version }}"
 git_release_name = "v{{ version }}"
