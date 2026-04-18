@@ -30,3 +30,5 @@ What problem does this solve?
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have made corresponding changes to the documentation.
 - [ ] My changes generate no new warnings.
+- [ ] This branch is short-lived (opened within the last 2 days) and the diff is under ~400 LOC. If not, the PR description explains why.
+- [ ] Unfinished work behind this change is gated by a feature flag (see `libs/infra-config::features`) or otherwise inert by default.
