@@ -1,0 +1,46 @@
+# Dev bootstrap config for the local Zitadel stack.
+#
+# Consumed by `pim-bootstrap bootstrap --config bootstrap/dev.toml`. Pairs
+# with `compose.yml`'s Zitadel on port 18080 (D16) and the PAT dropped into
+# `pim_zitadel-bootstrap` volume by `bootstrap/steps.yaml` (D14).
+
+env = "dev"
+
+[zitadel]
+authority = "http://pim.localhost:18080"
+# Dev admin auth mode: read PAT from env var (D12). Prod flips to jwt_profile.
+admin_auth = "pat"
+admin_pat_env_var = "ZITADEL_ADMIN_PAT"
+
+[project]
+name = "pim"
+
+[api_app]
+name = "api-gateway"
+auth_method = "jwt_profile"
+
+[service_account]
+username = "user-service-sa"
+description = "Service account used by user-service to call Zitadel Management API"
+
+[[roles]]
+key = "admin"
+display_name = "Administrator"
+
+[[roles]]
+key = "member"
+display_name = "Member"
+
+# Output sinks, split by sensitivity per D10.
+#   - service_configs: non-secret IDs land in per-service config.toml
+#     (gitignored real files; committed as .example.toml).
+#   - jwt_key_path:    API-app JWT signing key. Written once; only
+#     overwritten with `--rotate-keys`.
+#   - env_file_path:   symmetric PATs. Referenced by compose `env_file:`.
+[outputs]
+jwt_key_path = "zitadel-key.json"
+env_file_path = ".env.local"
+
+[outputs.service_configs]
+api-gateway = "apps/api-gateway/config.toml"
+user-service = "apps/user-service/config.toml"

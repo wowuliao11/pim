@@ -1,5 +1,5 @@
 [workspace]
-members = ["libs/*", "apps/*"]
+members = ["libs/*", "apps/*", "tools/*"]
 resolver = "2"
 
 [workspace.package]
@@ -43,6 +43,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Configuration
 config = "0.15.19"
+toml = "0.8"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
 
 # Utilities
 uuid = { version = "1.20", features = ["v4"] }
