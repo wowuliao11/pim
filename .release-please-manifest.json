@@ -1,9 +1,0 @@
-{
-  "apps/api-gateway": "0.1.0",
-  "apps/user-service": "0.1.0",
-  "libs/infra-auth": "0.1.0",
-  "libs/infra-config": "0.1.0",
-  "libs/infra-telemetry": "0.1.0",
-  "libs/rpc-proto": "0.1.0",
-  "tools/pim-bootstrap": "0.1.0"
-}

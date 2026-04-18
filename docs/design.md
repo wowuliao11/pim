@@ -210,7 +210,30 @@ For detailed usage and migration notes, see [`docs/configuration.md`](./configur
 
 ---
 
-## 7. Future Evolution
+## 7. Release Automation
+
+### Tool
+
+[`release-plz`](https://github.com/release-plz/release-plz) via the official `release-plz/action@v0.5` GitHub Action. Workflow lives at `.github/workflows/release-plz.yml`, configuration at `release-plz.toml`.
+
+### Rationale
+
+release-plz is Rust-native and compares local `Cargo.toml` values against crates.io, so it transparently supports `version.workspace = true` inheritance. The previous tool (release-please) parses member manifests directly and fails on inherited `[package.version]` — see Plan 007 for the migration record and upstream issue `googleapis/release-please#2111`.
+
+### Flow
+
+1. On every push to `main`, `release-plz-pr` job opens or updates a Release PR containing version bumps and CHANGELOG entries derived from Conventional Commits.
+2. When that Release PR is merged, `release-plz-release` job creates git tags and GitHub Releases for each bumped crate.
+3. `publish = false` in `release-plz.toml` — crates are not pushed to crates.io. Flip per-package when/if publication becomes a goal.
+
+### Constraints
+
+- Commit messages MUST follow Conventional Commits (enforced on PR titles by `.github/workflows/pr-title.yml`, `amannn/action-semantic-pull-request@v5`).
+- Workspace version inheritance (`version.workspace = true` in member crates, canonical `[workspace.package] version` in root `Cargo.toml`) is the supported pattern and MUST be preserved.
+
+---
+
+## 8. Future Evolution
 
 - [ ] Database integration (per-service ownership)
 - [ ] Health checks / readiness probes
