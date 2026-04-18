@@ -2,18 +2,28 @@
 # Docs: https://release-plz.ieni.dev/docs/config
 
 [workspace]
-# Do NOT publish to crates.io. This repo is an application-layer monorepo;
-# we only want tag + GitHub Release + Release PR automation.
+# Do NOT publish to crates.io. This repo is an application-layer monorepo.
 publish = false
 
-# Generate/update CHANGELOG.md for each crate.
+# Generate/update CHANGELOG.md for each crate on every release.
 changelog_update = true
 
-# Create a GitHub Release when a tag is pushed.
-git_release_enable = true
+# Disable per-crate git tags and GitHub Releases by default; api-gateway
+# acts as the workspace representative and creates a single v{version} tag.
+git_tag_enable = false
+git_release_enable = false
 
-# Use the commit message of the release PR as the tag message.
-git_tag_enable = true
-
-# Semver checks require publishing to crates.io to diff against; disable since publish = false.
+# Semver checks require crates.io publishing; disable since publish = false.
 semver_check = false
+
+# ──────────────────────────────────────────────────────────────────────────
+# api-gateway is the workspace representative.
+# It creates the single canonical "v{version}" tag and GitHub Release.
+# Tag/release name intentionally omits the crate prefix.
+# ──────────────────────────────────────────────────────────────────────────
+[[package]]
+name = "api-gateway"
+git_tag_enable = true
+git_release_enable = true
+tag_name = "v{{ version }}"
+git_release_name = "v{{ version }}"
