@@ -295,7 +295,7 @@ checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
 name = "api-gateway"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -1699,7 +1699,7 @@ dependencies = [
 
 [[package]]
 name = "infra-auth"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "infra-config"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "config",
  "serde",
@@ -1717,7 +1717,7 @@ dependencies = [
 
 [[package]]
 name = "infra-telemetry"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2455,7 +2455,7 @@ dependencies = [
 
 [[package]]
 name = "pim-bootstrap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2993,7 +2993,7 @@ dependencies = [
 
 [[package]]
 name = "rpc-proto"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "prost",
  "prost-types",
@@ -4115,7 +4115,7 @@ dependencies = [
 
 [[package]]
 name = "user-service"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
