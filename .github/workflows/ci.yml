@@ -62,7 +62,7 @@ jobs:
       - run: buf format --diff --exit-code
       - name: Buf breaking change detection
         if: github.event_name == 'pull_request'
-        run: buf breaking --against '.git#branch=${{ github.event.pull_request.base.ref }}'
+        run: buf breaking --against '.git#ref=refs/remotes/origin/${{ github.event.pull_request.base.ref }}'
 
   deny:
     name: Cargo Deny
