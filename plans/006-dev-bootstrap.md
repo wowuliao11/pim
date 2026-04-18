@@ -261,11 +261,11 @@ git commit -m "feat(compose): local Zitadel dev stack on port 18080 (no Login, n
 - Create: `tools/pim-bootstrap/src/config.rs`
 - Modify: `Cargo.toml` (workspace members)
 
-- [ ] **Step 1: Register crate in workspace**
+- [x] **Step 1: Register crate in workspace**
 
 Add `"tools/pim-bootstrap"` to `[workspace.members]`.
 
-- [ ] **Step 2: Declare crate**
+- [x] **Step 2: Declare crate**
 
 `tools/pim-bootstrap/Cargo.toml`:
 
@@ -293,7 +293,7 @@ anyhow = "1"
 zitadel.workspace = true  # reuse credentials/JWT profile primitives
 ```
 
-- [ ] **Step 3: Define CLI surface**
+- [x] **Step 3: Define CLI surface**
 
 `src/cli.rs` — three subcommands:
 
@@ -303,7 +303,7 @@ zitadel.workspace = true  # reuse credentials/JWT profile primitives
 
 Global flags: `--zitadel-url`, `--admin-key-file` (falls back to env).
 
-- [ ] **Step 4: Define config schema**
+- [x] **Step 4: Define config schema**
 
 `src/config.rs`:
 
@@ -343,7 +343,7 @@ pub struct OutputSinks {
 
 For prod, paths can be sentinel strings like `"stdout:jwt_key"` or `"stdout:pat"` so operators pipe to their secret manager instead of landing files on disk.
 
-- [ ] **Step 5: Smoke-test CLI**
+- [x] **Step 5: Smoke-test CLI**
 
 Implement stub handlers that just log the parsed config. Run:
 
@@ -353,7 +353,7 @@ cargo run -p pim-bootstrap -- bootstrap --config bootstrap/dev.toml --dry-run
 
 Expected: parses, logs, exits 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Cargo.toml tools/pim-bootstrap/
@@ -367,7 +367,7 @@ git commit -m "feat(bootstrap): pim-bootstrap CLI skeleton with declarative conf
 - Create: `bootstrap/prod.example.toml`
 - Create: `bootstrap/seed.dev.toml`
 
-- [ ] **Step 1: Author `bootstrap/dev.toml`**
+- [x] **Step 1: Author `bootstrap/dev.toml`**
 
 Concrete, runnable values for local:
 
@@ -375,7 +375,7 @@ Concrete, runnable values for local:
 env = "dev"
 
 [zitadel]
-authority = "http://pim.localhost:8080"
+authority = "http://pim.localhost:18080"
 # Dev admin auth mode: read PAT from env var (per D12). Prod flips to jwt_profile.
 admin_auth = "pat"
 admin_pat_env_var = "ZITADEL_ADMIN_PAT"
@@ -410,11 +410,11 @@ user-service = "apps/user-service/config.toml"
 
 The three output sinks correspond to D10's sensitivity layering: non-secret config lands in service `config.toml` files, the JWT app key lands in its own file, the PAT lands in `.env.local`.
 
-- [ ] **Step 2: Author `bootstrap/prod.example.toml`**
+- [x] **Step 2: Author `bootstrap/prod.example.toml`**
 
 Same structure, placeholders for authority + admin credentials, outputs pointing to stdout markers (`"stdout:jwt_key"`) so prod operators pipe to their secret manager.
 
-- [ ] **Step 3: Author `bootstrap/seed.dev.toml`**
+- [x] **Step 3: Author `bootstrap/seed.dev.toml`**
 
 ```toml
 env = "dev"
@@ -456,7 +456,7 @@ user = "charlie"
 roles = ["member"]
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add bootstrap/dev.toml bootstrap/prod.example.toml bootstrap/seed.dev.toml
@@ -760,7 +760,7 @@ git commit -m "chore: remove tracked dev key, rely on gitignored regeneration" -
 
 ### Phase 1
 - [ ] `podman compose up -d postgres zitadel-api` starts cleanly; `zitadel-api` healthcheck passes within 60s
-- [ ] `http://pim.localhost:8080/debug/healthz` returns 200 through Traefik
+- [ ] `http://pim.localhost:18080/debug/healthz` returns 200 (direct publish, no Traefik — see D15/D16)
 - [ ] `/zitadel/bootstrap/pim-admin.pat` inside the `zitadel-api` container contains a non-empty PAT (dispensed by `FirstInstance` in `bootstrap/steps.yaml`)
 - [ ] `.env.local.example` is committed; `.env.local` is absent from `git ls-files`
 - [ ] `git check-ignore` confirms `zitadel-key.json`, `.env.local`, and `bootstrap/*.machinekey.json` are all ignored
@@ -797,7 +797,7 @@ git commit -m "chore: remove tracked dev key, rely on gitignored regeneration" -
 | Phase | Status |
 |-------|--------|
 | Phase 1: Local compose stack | In Progress — Task 1.1 ✅, Task 1.2 ✅ (smoke test green 2026-04-18) |
-| Phase 2: `pim-bootstrap` skeleton | Not Started |
+| Phase 2: `pim-bootstrap` skeleton | ✅ Complete — Task 2.1 ✅, Task 2.2 ✅ (all subcommands dry-run green 2026-04-18) |
 | Phase 3: Idempotent bootstrap ops | Not Started |
 | Phase 4: Dev seed | Not Started |
 | Phase 5: Developer ergonomics | Not Started |

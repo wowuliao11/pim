@@ -1,0 +1,45 @@
+# Example prod bootstrap config. Copy to `bootstrap/prod.toml` (gitignored)
+# and replace placeholders. The real file MUST live outside the repo or be
+# encrypted (sops, SOPS-age, etc.); this example ships only the shape.
+
+env = "prod"
+
+[zitadel]
+# Real tenant authority, e.g. https://auth.pim.example.com
+authority = "https://REPLACE_ME.zitadel.cloud"
+# Prod uses a service-account JWT profile (D12). `admin_key_file` points at
+# a Zitadel service-account key JSON mounted into the runner.
+admin_auth = "jwt_profile"
+admin_key_file = "/run/secrets/pim-bootstrap-admin-key.json"
+
+[project]
+name = "pim"
+
+[api_app]
+name = "api-gateway"
+auth_method = "jwt_profile"
+
+[service_account]
+username = "user-service-sa"
+description = "Service account used by user-service to call Zitadel Management API"
+
+[[roles]]
+key = "admin"
+display_name = "Administrator"
+
+[[roles]]
+key = "member"
+display_name = "Member"
+
+# Prod output sinks use `stdout:<tag>` sentinels so operators can pipe
+# provisioned values to their secret manager (Vault, AWS Secrets Manager,
+# K8s sealed secrets, ...) instead of landing them on disk.
+[outputs]
+jwt_key_path = "stdout:jwt_key"
+env_file_path = "stdout:pat"
+
+[outputs.service_configs]
+# Non-secret IDs (project ID, app client ID) still land in a reviewable
+# config artifact — pick a path appropriate to your deployment pipeline.
+api-gateway = "deploy/prod/api-gateway.config.toml"
+user-service = "deploy/prod/user-service.config.toml"

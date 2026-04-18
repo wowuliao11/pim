@@ -1,0 +1,34 @@
+[package]
+name = "pim-bootstrap"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Declarative Zitadel bootstrap and dev seed tool for the PIM workspace"
+
+[[bin]]
+name = "pim-bootstrap"
+path = "src/main.rs"
+
+[dependencies]
+# CLI
+clap = { workspace = true }
+
+# HTTP / Zitadel
+reqwest = { workspace = true }
+zitadel = { workspace = true }
+
+# Config and serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Async runtime (bin does not need the full `tokio` feature set)
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Errors
+thiserror = { workspace = true }
+anyhow = { workspace = true }

@@ -1,0 +1,43 @@
+# Dev seed: disposable human users for local development.
+#
+# Consumed by `pim-bootstrap seed --config bootstrap/seed.dev.toml`.
+# The CLI refuses to run this file if `env != "dev"`; the passwords below
+# are disposable by design and MUST NOT be reused in any real tenant.
+
+env = "dev"
+
+[[users]]
+username = "alice"
+email = "alice@pim.dev"
+given_name = "Alice"
+family_name = "Tester"
+initial_password = "Alice-Dev-Pass-1"
+email_verified = true
+
+[[users]]
+username = "bob"
+email = "bob@pim.dev"
+given_name = "Bob"
+family_name = "Tester"
+initial_password = "Bob-Dev-Pass-1"
+email_verified = true
+
+[[users]]
+username = "charlie"
+email = "charlie@pim.dev"
+given_name = "Charlie"
+family_name = "Tester"
+initial_password = "Charlie-Dev-Pass-1"
+email_verified = true
+
+[[role_assignments]]
+user = "alice"
+roles = ["admin"]
+
+[[role_assignments]]
+user = "bob"
+roles = ["member"]
+
+[[role_assignments]]
+user = "charlie"
+roles = ["member"]
