@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/wowuliao11/pim/compare/infra-config-v0.1.1...infra-config-v0.1.2) - 2026-04-18
+
+### Added
+
+- add CI/CD infrastructure with Buf integration, cargo-deny, and Docker support
+- *(infra-auth)* extract shared JWT library and simplify service setup
+- refactor telemetry and configuration modules into separate libraries
+
+### Other
+
+- release v0.1.1 ([#9](https://github.com/wowuliao11/pim/pull/9))
+
 ## [0.1.1](https://github.com/wowuliao11/pim/compare/infra-config-v0.1.0...infra-config-v0.1.1) - 2026-04-18
 
 ### Added
