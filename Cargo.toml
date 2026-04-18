@@ -42,7 +42,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Configuration
-config = "0.15.19"
+config = "0.15.22"
 toml = "0.8"
 
 # CLI
