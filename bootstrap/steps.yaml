@@ -1,0 +1,35 @@
+# Zitadel setup steps for the first boot of the local dev instance.
+#
+# Consumed by `zitadel start-from-init --steps /bootstrap/steps.yaml` (see
+# compose.yml). Only applied when the Postgres database is empty; subsequent
+# boots ignore this file. To re-apply, run `just dev-reset` which wipes the
+# Postgres volume + the Zitadel bootstrap volume.
+#
+# Schema reference: the `DefaultInstance` section of Zitadel's defaults.yaml
+# (cmd/defaults.yaml in zitadel/zitadel@v4.13.0). `FirstInstance` overrides
+# `DefaultInstance` for the initial boot only.
+#
+# Field names verified against zitadel/zitadel@v4.13.0 cmd/setup/03.go
+# (FirstInstance struct). `PatPath` is the Machine-namespace PAT output;
+# `LoginClientPatPath` is the Login-namespace equivalent (unused here since
+# we disable the Login service).
+
+FirstInstance:
+  # Where Zitadel writes the minted admin PAT on first boot. Must sit on the
+  # `zitadel-bootstrap` volume so pim-bootstrap can read it back.
+  PatPath: /zitadel/bootstrap/pim-admin.pat
+
+  Org:
+    Name: pim-dev
+
+    # Admin machine user. Gets the IAM_OWNER role automatically when
+    # `Machine.Machine` is defined (per defaults.yaml:1024 comment). This is
+    # the identity pim-bootstrap authenticates as to provision the Project,
+    # API App, Roles, and user-service Service Account.
+    Machine:
+      Machine:
+        Username: pim-admin
+        Name: PIM Bootstrap Admin
+      Pat:
+        # Dev-only: long-lived PAT. Rotated by `just dev-reset`.
+        ExpirationDate: "2099-01-01T00:00:00Z"
