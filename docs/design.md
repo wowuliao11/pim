@@ -233,7 +233,52 @@ release-plz is Rust-native and compares local `Cargo.toml` values against crates
 
 ---
 
-## 8. Future Evolution
+## 8. Development Workflow
+
+PIM follows **Trunk-Based Development**. The operational handbook lives in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md); this section records the
+architectural decisions that the workflow depends on.
+
+### 8.1 Trunk and integration
+
+- `main` is the single integration branch. Branch protection enforces:
+  squash-only merges, linear history, no force-push, no self-approve, and
+  6 required status checks (Rustfmt, Clippy, Test, Buf, Cargo Deny,
+  Conventional Commit).
+- All work happens on short-lived branches (target lifetime < 2 working
+  days, target diff < ~400 LOC).
+- Branch naming follows Conventional Commit types: `feat/`, `fix/`,
+  `refactor/`, `docs/`, `ci/`, `chore/`, `test/`. Dependabot branches are
+  exempt.
+
+### 8.2 Hiding incomplete work
+
+To avoid long-lived branches, incomplete work lands on `main` behind runtime
+feature flags. The mechanism lives in `libs/infra-config::features`:
+
+- Flags are read from environment variables of the form
+  `APP_FEATURE_<UPPERCASE_NAME>=true`.
+- Code uses `infra_config::features::is_enabled("flag_name")`.
+- Flags are debt: each new flag has a documented owner and removal criterion
+  in the introducing PR.
+
+### 8.3 Plan-required threshold
+
+Most changes ship without a plan file. A `/plans/NNN-*.md` is mandatory only
+when the change is genuinely large or cross-cutting (see `AGENTS.md §3.1` for
+the authoritative triggers). The threshold exists to keep architectural
+decisions reviewable, not to gate routine work.
+
+### 8.4 Pull request template
+
+Located at `.github/pull_request_template.md` (auto-applied by GitHub). The
+template enforces declaration of: purpose, proposed changes, test plan,
+breaking-change status, and the TBD discipline checks (short-lived branch,
+size limit, feature-flag gating).
+
+---
+
+## 9. Future Evolution
 
 - [ ] Database integration (per-service ownership)
 - [ ] Health checks / readiness probes

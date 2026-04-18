@@ -51,10 +51,50 @@ This document acts as the **primary constitution** for all AI agents and human d
 
 ### 3.1 Long-Term Requirements & Planning
 
-1. **Trigger:** When a user request is identified as "complex" or "multi-step" (cannot be finished in one response).
-2. **Action:** The Agent MUST Create a new file in `/plans/` (e.g., `/plans/001-user-auth.md`).
-3. **Content:** Draft a phased approach.
-4. **Validation:** Ask the user to confirm the plan before writing code.
+A plan in `/plans/NNN-*.md` is a heavyweight artifact. It is **only** required
+when the work is genuinely large or cross-cutting. Most day-to-day changes
+should be shipped as a single PR with a clear description and **no plan file**.
+
+#### When a plan IS required
+
+A plan MUST be drafted, confirmed by the user, and committed before code when
+**any** of the following is true:
+
+- **Scope:** The work cannot reasonably fit in a single PR (estimated > ~400
+  lines of diff or > ~2 working days of effort).
+- **Surface area:** The change touches **3 or more crates**, or modifies a
+  public API surface in `libs/`, or alters a proto contract in `rpc-proto`.
+- **Architecture:** The change introduces or modifies a cross-cutting pattern
+  documented in `docs/design.md` (auth, transport, observability, release,
+  build, configuration model).
+- **Migration:** The change requires a coordinated migration across data
+  shape, config shape, proto contract, or a CI/release gate.
+- **Multi-session:** The user explicitly frames the request as multi-session
+  or multi-phase, or asks for a plan.
+
+#### When a plan is NOT required
+
+If **none** of the above triggers fire, do not create a plan file. Examples
+that ship without a plan:
+
+- Single-PR bug fixes, refactors, or small feature additions confined to one
+  crate.
+- Dependency bumps, CI tweaks, lint fixes, doc edits, test additions.
+- Config and tooling adjustments that do not change the architecture.
+
+For these, document the change in the PR description (using the template in
+`.github/pull_request_template.md`).
+
+#### Procedure when a plan IS required
+
+1. Create `/plans/NNN-<short-slug>.md` with: Context/Goal, Phased steps,
+   Acceptance criteria per phase, Status.
+2. Ask the user to confirm the plan before writing code.
+3. Update the plan's Status as phases complete.
+
+> **Heuristic:** If you are unsure, prefer to ship without a plan and over-
+> communicate in the PR description. A plan is the right tool when the work
+> outgrows what a PR description can carry.
 
 ### 3.2 Design Evolution
 
