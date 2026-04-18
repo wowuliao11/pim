@@ -1,0 +1,62 @@
+name: Release-plz
+
+on:
+  push:
+    branches:
+      - main
+
+# Prevent overlapping runs on main from racing on tags / PR updates.
+concurrency:
+  group: release-plz-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Release unpublished packages: create tags and GitHub Releases when the
+  # Release PR is merged into main.
+  release-plz-release:
+    name: Release-plz release
+    if: ${{ github.repository_owner == 'wowuliao11' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run release-plz
+        uses: release-plz/action@v0.5
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Create or update the Release PR on every push to main.
+  release-plz-pr:
+    name: Release-plz PR
+    if: ${{ github.repository_owner == 'wowuliao11' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    # Serialize PR updates so concurrent pushes don't clobber each other.
+    concurrency:
+      group: release-plz-pr
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run release-plz
+        uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

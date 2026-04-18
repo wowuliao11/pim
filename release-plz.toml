@@ -1,0 +1,19 @@
+# release-plz configuration
+# Docs: https://release-plz.ieni.dev/docs/config
+
+[workspace]
+# Do NOT publish to crates.io. This repo is an application-layer monorepo;
+# we only want tag + GitHub Release + Release PR automation.
+publish = false
+
+# Generate/update CHANGELOG.md for each crate.
+changelog_update = true
+
+# Create a GitHub Release when a tag is pushed.
+git_release_enable = true
+
+# Use the commit message of the release PR as the tag message.
+git_tag_enable = true
+
+# Semver checks require publishing to crates.io to diff against; disable since publish = false.
+semver_check = false
