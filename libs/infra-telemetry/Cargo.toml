@@ -17,7 +17,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 # Prometheus feature
-metrics = { version = "0.22", optional = true }
+metrics = { version = "0.24", optional = true }
 metrics-exporter-prometheus = { version = "0.14", optional = true }
 metrics-process = { version = "1", optional = true }
 

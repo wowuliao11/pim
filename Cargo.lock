@@ -1727,7 +1727,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
- "metrics",
+ "metrics 0.24.3",
  "metrics-exporter-prometheus",
  "metrics-process",
  "pin-project-lite",
@@ -1991,6 +1991,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "metrics"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d5312e9ba3771cfa961b585728215e3d972c950a3eed9252aa093d6301277e8"
+dependencies = [
+ "ahash",
+ "portable-atomic",
+]
+
+[[package]]
 name = "metrics-exporter-prometheus"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2003,7 +2013,7 @@ dependencies = [
  "hyper-util",
  "indexmap 2.13.0",
  "ipnet",
- "metrics",
+ "metrics 0.22.4",
  "metrics-util",
  "quanta",
  "thiserror 1.0.69",
@@ -2019,7 +2029,7 @@ checksum = "f69c2a98ebe047f74b834c7eeaad0db5a9fd3604e129721d212e0ef9442e238a"
 dependencies = [
  "libproc",
  "mach2",
- "metrics",
+ "metrics 0.22.4",
  "once_cell",
  "procfs",
  "rlimit",
@@ -2035,7 +2045,7 @@ dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils",
  "hashbrown 0.14.5",
- "metrics",
+ "metrics 0.22.4",
  "num_cpus",
  "quanta",
  "sketches-ddsketch",
