@@ -130,11 +130,18 @@ libs/*        ───▶ proto/
 
 ## Port Allocation
 
-| Service      | Default Port | Protocol |
-| ------------ | ------------ | -------- |
-| api-gateway  | 8080         | HTTP     |
-| auth-service | 50051        | gRPC     |
-| user-service | 50052        | gRPC     |
+Ports follow the fixed policy in
+[ADR-0015](../docs/decisions/0015-allocate-service-ports-with-fixed-policy.md).
+See `docs/design.md §5` for the authoritative tables. Summary:
+
+| Service       | Container port | Host port (compose) | Protocol |
+| ------------- | -------------- | ------------------- | -------- |
+| api-gateway   | 8080           | 18000               | HTTP     |
+| user-service  | 50051          | (not published)     | gRPC     |
+| zitadel       | 8080           | 18080               | HTTP     |
+
+Metrics ports follow `60000 + (service_port % 1000)`:
+api-gateway `60080`, user-service `60051`.
 
 ## Code Generation
 
@@ -145,8 +152,10 @@ Proto files are compiled during `cargo build` of `libs/rpc-proto`:
 
 ## Environment Variables
 
-Each service supports configuration via environment variables:
+Each service supports configuration via environment variables (double-underscore
+nesting separator). Prefixes:
 
-- **api-gateway:** `APP_APP_HOST`, `APP_APP_PORT`, `APP_JWT_SECRET`
-- **auth-service:** `AUTH_SERVICE_HOST`, `AUTH_SERVICE_PORT`, `AUTH_SERVICE_JWT_SECRET`
-- **user-service:** `USER_SERVICE_HOST`, `USER_SERVICE_PORT`
+- **api-gateway:** `APP__*` (e.g. `APP__APP__HOST`, `APP__APP__PORT`, `APP__APP__USER_SERVICE_URL`, `APP__ZITADEL__AUTHORITY`, `APP__ZITADEL__KEY_FILE`)
+- **user-service:** `USER_SERVICE__*` (e.g. `USER_SERVICE__HOST`, `USER_SERVICE__PORT`, `USER_SERVICE__ZITADEL_AUTHORITY`, `USER_SERVICE__ZITADEL_SERVICE_ACCOUNT_TOKEN`)
+
+See `docs/configuration.md` for the full list.

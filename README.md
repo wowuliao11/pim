@@ -29,12 +29,14 @@ cargo build -p api-gateway
 # Run API Gateway (HTTP on :8080)
 cargo run -p api-gateway
 
-# Run Auth Service (gRPC on :50051)
-cargo run -p auth-service
-
-# Run User Service (gRPC on :50052)
+# Run User Service (gRPC on :50051)
 cargo run -p user-service
 ```
+
+> Host-published ports differ when running via `compose.yml`. See
+> [docs/design.md §5](./docs/design.md#5-port-allocation) and
+> [ADR-0015](./docs/decisions/0015-allocate-service-ports-with-fixed-policy.md)
+> for the full port allocation policy.
 
 ### Configuration
 
@@ -52,8 +54,8 @@ See [docs/configuration.md](./docs/configuration.md) for detailed usage.
 # Override host/port via environment
 APP__APP__HOST=0.0.0.0 APP__APP__PORT=3000 cargo run -p api-gateway
 
-# Set JWT secret for auth-service
-AUTH_SERVICE__JWT_SECRET=my-secret-key cargo run -p auth-service
+# Point the gateway at a non-default user-service endpoint
+APP__APP__USER_SERVICE_URL=http://pim-user-service:50051 cargo run -p api-gateway
 ```
 
 ### Tests

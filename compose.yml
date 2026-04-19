@@ -76,6 +76,11 @@ services:
 
   # PIM services (Phase 3+ smoke test; not started by default).
   # Bring up with: `podman compose --profile app up -d`
+  #
+  # Port policy: see ADR-0015.
+  #   - api-gateway publishes 18000 on the host (Zitadel owns 18080).
+  #   - user-service is NOT published to the host; the gateway reaches it
+  #     over the compose network at pim-user-service:50051.
   pim-api-gateway:
     profiles: ["app"]
     build:
@@ -84,7 +89,11 @@ services:
       args:
         SERVICE_NAME: api-gateway
     ports:
-      - "18080:8080"
+      - "18000:8080"
+    environment:
+      # Override the 127.0.0.1 default baked into the gateway binary so it
+      # targets user-service via compose-network DNS instead of localhost.
+      APP__APP__USER_SERVICE_URL: "http://pim-user-service:50051"
     volumes:
       - ./apps/api-gateway/config.toml:/app/config.toml:ro
       - ./zitadel-key.json:/app/zitadel-key.json:ro
@@ -100,8 +109,8 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_NAME: user-service
-    ports:
-      - "50051:50051"
+    # No host publish (ADR-0015). Reachable on the compose network as
+    # pim-user-service:50051.
     env_file:
       - .env.local
     volumes:
