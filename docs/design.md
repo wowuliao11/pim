@@ -133,7 +133,50 @@ Defined in `proto/` directory:
 
 ---
 
-## 5. Configuration Management
+## 5. Port Allocation
+
+Port assignments follow a fixed policy codified in
+[ADR-0015](./decisions/0015-allocate-service-ports-with-fixed-policy.md).
+The policy distinguishes **container-internal** ports (what each process binds
+inside its container) from **host-published** ports (what the local compose
+stack exposes on the developer's machine).
+
+### Container-internal listeners
+
+| Service        | Port    | Protocol | Purpose                     |
+| -------------- | ------- | -------- | --------------------------- |
+| `api-gateway`  | `8080`  | HTTP     | External REST API           |
+| `user-service` | `50051` | gRPC     | Domain service for users    |
+| `zitadel`      | `8080`  | HTTP     | Identity provider (vendor)  |
+
+### Host-published ports (`compose.yml`)
+
+| Service        | Host port | Container port | Rationale                                     |
+| -------------- | --------- | -------------- | --------------------------------------------- |
+| `zitadel-api`  | `18080`   | `8080`         | Fixed by ADR-0005 (`authority` URL is signed) |
+| `api-gateway`  | `18000`   | `8080`         | Developer-facing entry point                  |
+| `user-service` | —         | `50051`        | Internal gRPC; not exposed on the host        |
+
+### Metrics ports
+
+Metrics endpoints follow the rule `60000 + (service_port % 1000)`:
+
+| Service        | Metrics port |
+| -------------- | ------------ |
+| `api-gateway`  | `60080`      |
+| `user-service` | `60051`      |
+
+### Cross-service addressing
+
+Inside the compose network, services address each other by service name on the
+container-internal port. The gateway's default
+`app.user_service_url = http://127.0.0.1:50051` is overridden in compose via
+`APP__APP__USER_SERVICE_URL=http://pim-user-service:50051`. Production
+deployments MUST override the same variable with the real endpoint.
+
+---
+
+## 6. Configuration Management
 
 All services use a **shared configuration loader** from `libs/infra-config` that supports TOML files and environment variables.
 
@@ -161,12 +204,12 @@ All services use a **shared configuration loader** from `libs/infra-config` that
 
 ### Gateway-specific Settings
 
-| Setting              | Default                    | Description                     |
-| -------------------- | -------------------------- | ------------------------------- |
-| `app.user_service_url` | `http://127.0.0.1:50051` | gRPC endpoint of user-service  |
-| `app.host`           | `127.0.0.1`                | HTTP bind host                  |
-| `app.port`           | `8080`                     | HTTP bind port                  |
-| `app.metrics_port`   | `60080`                    | Prometheus metrics port         |
+| Setting              | Default                    | Description                                              |
+| -------------------- | -------------------------- | -------------------------------------------------------- |
+| `app.user_service_url` | `http://127.0.0.1:50051` | gRPC endpoint of user-service (override in compose/prod) |
+| `app.host`           | `127.0.0.1`                | HTTP bind host                                           |
+| `app.port`           | `8080`                     | HTTP bind port (see §5)                                  |
+| `app.metrics_port`   | `60080`                    | Prometheus metrics port (see §5)                         |
 
 ### TOML Files
 
@@ -194,7 +237,7 @@ For detailed usage and migration notes, see [`docs/configuration.md`](./configur
 
 ---
 
-## 6. Observability
+## 7. Observability
 
 ### Metrics
 
@@ -210,7 +253,7 @@ For detailed usage and migration notes, see [`docs/configuration.md`](./configur
 
 ---
 
-## 7. Release Automation
+## 8. Release Automation
 
 ### Tool
 
@@ -233,7 +276,7 @@ release-plz is Rust-native and compares local `Cargo.toml` values against crates
 
 ---
 
-## 8. Development Workflow
+## 9. Development Workflow
 
 PIM follows **Trunk-Based Development**. The operational handbook lives in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md); this section records the
@@ -278,7 +321,7 @@ size limit, feature-flag gating).
 
 ---
 
-## 9. Future Evolution
+## 10. Future Evolution
 
 - [ ] Database integration (per-service ownership)
 - [ ] Health checks / readiness probes

@@ -124,8 +124,8 @@ log_level = "info"
 
 # Service-specific fields
 host = "127.0.0.1"
-port = 50052
-metrics_port = 60052
+port = 50051
+metrics_port = 60051
 zitadel_authority = "https://my-instance.zitadel.cloud"
 zitadel_service_account_token = "your-service-account-pat"
 ```

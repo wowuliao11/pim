@@ -17,8 +17,8 @@ log_level = "info"
 # Service-Specific Configuration
 # ============================================================
 host = "127.0.0.1"
-port = 50052
-metrics_port = 60052
+port = 50051
+metrics_port = 60051
 
 # ============================================================
 # Zitadel Management API Configuration

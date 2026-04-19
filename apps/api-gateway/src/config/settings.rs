@@ -29,7 +29,10 @@ pub struct AppSettings {
     pub port: u16,
     pub metrics_port: u16,
     pub name: String,
-    /// gRPC endpoint of the user-service, e.g. "http://127.0.0.1:50051"
+    /// gRPC endpoint of the user-service. Defaults to the local `cargo run`
+    /// target (`http://127.0.0.1:50051`). In compose/prod, override via
+    /// `APP__APP__USER_SERVICE_URL` to the service-DNS form
+    /// (e.g. `http://pim-user-service:50051`). Port allocation: see ADR-0015.
     #[serde(default = "default_user_service_url")]
     pub user_service_url: String,
 }

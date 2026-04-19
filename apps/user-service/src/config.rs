@@ -38,8 +38,8 @@ impl Default for Settings {
         Self {
             common: CommonConfig::default(),
             host: "127.0.0.1".to_string(),
-            port: 50052,
-            metrics_port: 60052,
+            port: 50051,
+            metrics_port: 60051,
             zitadel_authority: "https://localhost.zitadel.cloud".to_string(),
             zitadel_service_account_token: "change-me".to_string(),
         }
