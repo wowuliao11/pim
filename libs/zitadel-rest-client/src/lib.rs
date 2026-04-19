@@ -5,6 +5,13 @@ mod client;
 mod error;
 mod pagination;
 
+pub mod app;
+pub mod project;
+pub mod project_role;
+pub mod user;
+pub mod user_grant;
+pub mod user_key;
+
 pub use auth::AdminCredential;
 pub use client::ZitadelClient;
 pub use error::ZitadelError;

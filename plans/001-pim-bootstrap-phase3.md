@@ -62,23 +62,50 @@ Phases land as **separate commits on the current branch** (`docs/adr-0016-0017-p
 
 Split from A so Phase A lands a reviewable 300-line PR first. Lives in same crate.
 
-**Scope**
-- `project.rs` — `list_projects(query)`, `create_project(name)`, `get_project(id)`.
-- `app.rs` — `list_apps(project_id, query)`, `create_api_app(project_id, name, auth_method)`, `get_app(project_id, app_id)`, `add_app_key(project_id, app_id, key_type, expiration)` → returns `{ key_id, key_details_json }`.
-- `user.rs` — `list_machine_users(query)`, `create_machine_user(username, name, description)`, `list_human_users(query)`, `create_human_user(…)` (covering Phase E seed-side need), `get_user(id)`.
-- `user_key.rs` — `add_machine_user_key(user_id, key_type, expiration)`, `remove_machine_user_key(user_id, key_id)`.
-- `user_pat.rs` — `add_machine_user_pat(user_id, expiration) -> (pat_id, token)`, `list_machine_user_pats(user_id)`.
-- `project_role.rs` — `list_project_roles(project_id, query)`, `add_project_role(project_id, key, display_name, group)`.
-- `user_grant.rs` — `list_user_grants(query)`, `create_user_grant(user_id, project_id, role_keys)`.
+**Scope (authoritative: ADR-0016 §3 table — 20 endpoints, 6 modules)**
+
+- `project.rs` (4):
+  - `get_project(id)` — `GET /management/v1/projects/{id}`
+  - `list_projects(query)` — `POST /management/v1/projects/_search`
+  - `create_project(req)` — `POST /management/v1/projects`
+  - `update_project(id, req)` — `PUT /management/v1/projects/{id}`
+- `app.rs` (4):
+  - `get_app(project_id, app_id)` — `GET /management/v1/projects/{project_id}/apps/{app_id}`
+  - `list_apps(project_id, query)` — `POST /management/v1/projects/{project_id}/apps/_search`
+  - `create_api_app(project_id, req)` — `POST /management/v1/projects/{project_id}/apps/api`
+  - `update_app(project_id, app_id, req)` — `PUT /management/v1/projects/{project_id}/apps/{app_id}`
+- `user.rs` (2):
+  - `list_users(query)` — `POST /management/v1/users/_search`
+  - `create_machine_user(req)` — `POST /management/v1/users/machine`
+- `user_key.rs` (3):
+  - `list_machine_user_keys(user_id, query)` — `POST /management/v1/users/{user_id}/keys/_search`
+  - `add_machine_user_key(user_id, req)` — `POST /management/v1/users/{user_id}/keys`
+  - `remove_machine_user_key(user_id, key_id)` — `DELETE /management/v1/users/{user_id}/keys/{key_id}`
+- `project_role.rs` (3):
+  - `list_project_roles(project_id, query)` — `POST /management/v1/projects/{project_id}/roles/_search`
+  - `add_project_role(project_id, req)` — `POST /management/v1/projects/{project_id}/roles`
+  - `bulk_add_project_roles(project_id, req)` — `POST /management/v1/projects/{project_id}/roles/_bulk`
+- `user_grant.rs` (4):
+  - `list_user_grants(query)` — `POST /management/v1/user-grants/_search`
+  - `create_user_grant(req)` — `POST /management/v1/user-grants`
+  - `update_user_grant(grant_id, req)` — `PUT /management/v1/user-grants/{grant_id}`
+  - `remove_user_grant(grant_id)` — `DELETE /management/v1/user-grants/{grant_id}`
+
+**NOT in Phase A.2** — deferred until an amending ADR adds them (per ADR-0016
+"New endpoints require an amending ADR"):
+- Machine user PAT endpoints. If Phase E seed needs PATs, the seed step
+  writes an amending ADR first.
+- Human user creation endpoints. Phase E seed uses machine users only or
+  takes the same amendment path.
 
 **Deliverables**
 - Domain modules behind `pub use` from `lib.rs`.
 - Each method: `pub async fn …(&self, …) -> Result<T, ZitadelError>`, takes `&ZitadelClient`, returns strongly-typed response structs.
 - Minimal `serde` structs — only fields the ensure-ops need. Extra Zitadel fields are ignored via `#[serde(default)]` / non-exhaustive parsing where possible.
-- `httpmock`-based test per module: one happy-path, one 409 mapping. (No live Zitadel in unit tests.)
+- `wiremock`-based test per module: one happy-path, one 409 mapping. (No live Zitadel in unit tests.)
 
 **Acceptance**
-- `cargo test -p zitadel-rest-client` green with ≥ 14 unit tests total (A + A.2).
+- `cargo test -p zitadel-rest-client` green with ≥ 14 unit tests total (A + A.2). Target ≥ 12 new tests (2 per module × 6 modules).
 - Every method signature and endpoint URL has a one-line comment citing ADR-0016 §3 table row.
 
 ---
