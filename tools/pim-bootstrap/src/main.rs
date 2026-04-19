@@ -9,7 +9,9 @@
 use clap::Parser;
 use pim_bootstrap::cli::{Cli, Command, EnvFlag};
 use pim_bootstrap::config::{BootstrapConfig, Environment, SeedConfig};
+use pim_bootstrap::ensure::{run_pipeline, DynEnsureOp, Flags, Mode};
 use tracing::{info, warn};
+use zitadel_rest_client::{AdminCredential, ZitadelClient};
 
 fn init_tracing() {
     use tracing_subscriber::EnvFilter;
@@ -50,11 +52,34 @@ async fn main() -> anyhow::Result<()> {
             );
 
             if *dry_run {
-                info!("dry-run: no Zitadel calls made");
+                info!("dry-run: running pipeline in Plan mode (no writes)");
+            }
+
+            let mode = if *dry_run { Mode::Plan } else { Mode::Apply };
+            let flags = Flags {
+                sync: *sync,
+                rotate_keys: *rotate_keys,
+            };
+
+            // Phase B: pipeline scaffold with no concrete ops yet. Phase C wires
+            // ProjectEnsureOp / ApiAppEnsureOp / ServiceAccountEnsureOp /
+            // ProjectRolesEnsureOp into this vec.
+            let ops: Vec<Box<dyn DynEnsureOp>> = Vec::new();
+
+            if ops.is_empty() {
+                warn!(
+                    "no ensure-ops registered yet — Phase B ships the pipeline scaffold only; \
+                     concrete ops land in Phase C"
+                );
                 return Ok(());
             }
 
-            warn!("bootstrap apply is not implemented yet (Phase 3)");
+            let client = build_zitadel_client(&cfg)?;
+            let result = run_pipeline(&ops, mode, flags, &client).await;
+            print_report(&result.report);
+            if let Some(err) = result.error {
+                return Err(err.into());
+            }
         }
 
         Command::Seed { config, dry_run, env } => {
@@ -119,5 +144,47 @@ fn resolve_env(config_env: Environment, cli_env: Option<EnvFlag>) -> Environment
         Some(EnvFlag::Dev) => Environment::Dev,
         Some(EnvFlag::Prod) => Environment::Prod,
         None => config_env,
+    }
+}
+
+fn build_zitadel_client(cfg: &BootstrapConfig) -> anyhow::Result<ZitadelClient> {
+    use pim_bootstrap::config::AdminAuthMode;
+
+    let credential = match cfg.zitadel.admin_auth {
+        AdminAuthMode::Pat => {
+            let env_var = cfg
+                .zitadel
+                .admin_pat_env_var
+                .as_deref()
+                .ok_or_else(|| anyhow::anyhow!("admin_auth = \"pat\" requires admin_pat_env_var in config"))?;
+            AdminCredential::from_env_pat(env_var)?
+        }
+        AdminAuthMode::JwtProfile => {
+            let path = cfg
+                .zitadel
+                .admin_key_file
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("admin_auth = \"jwt_profile\" requires admin_key_file in config"))?;
+            AdminCredential::from_jwt_key_path(path, &cfg.zitadel.authority)?
+        }
+    };
+
+    Ok(ZitadelClient::new(&cfg.zitadel.authority, credential)?)
+}
+
+fn print_report(report: &pim_bootstrap::ensure::PipelineReport) {
+    info!(
+        rows = report.rows.len(),
+        drift_detected = report.drift_detected,
+        "pipeline complete",
+    );
+    for row in &report.rows {
+        info!(
+            op = row.op_name,
+            state = %row.state,
+            outcome = ?row.outcome,
+            elapsed_ms = row.duration.as_millis() as u64,
+            "ensure-op result",
+        );
     }
 }

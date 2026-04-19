@@ -2533,6 +2533,7 @@ name = "pim-bootstrap"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "async-trait",
  "clap",
  "reqwest",
  "serde",
@@ -2542,7 +2543,9 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
+ "wiremock",
  "zitadel",
+ "zitadel-rest-client",
 ]
 
 [[package]]

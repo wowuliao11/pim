@@ -16,6 +16,7 @@ clap = { workspace = true }
 # HTTP / Zitadel
 reqwest = { workspace = true }
 zitadel = { workspace = true }
+zitadel-rest-client = { path = "../../libs/zitadel-rest-client" }
 
 # Config and serialization
 serde = { workspace = true }
@@ -25,6 +26,9 @@ toml = { workspace = true }
 # Async runtime (bin does not need the full `tokio` feature set)
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
+# Async trait objects for EnsureOp driver (ADR-0017 §Implementation notes).
+async-trait = { workspace = true }
+
 # Observability
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -32,3 +36,10 @@ tracing-subscriber = { workspace = true }
 # Errors
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+
+[dev-dependencies]
+# EnsureOp driver tests run against a real ZitadelClient pointed at a
+# wiremock server, per plan 001 Phase B acceptance (no MockZitadelClient
+# trait bifurcation).
+wiremock = "0.6"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }
