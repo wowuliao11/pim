@@ -1,0 +1,33 @@
+[package]
+name = "zitadel-rest-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Thin async REST client for Zitadel Management API v2 (pim-bootstrap)"
+
+[dependencies]
+# HTTP
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+url = "2"
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Errors
+thiserror = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+
+# JWT Profile credential minting (Phase A.2 will exercise; Phase A only needs the type)
+zitadel = { workspace = true }
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio = { version = "1", features = ["macros", "rt"] }
