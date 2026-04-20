@@ -288,10 +288,10 @@ and the gateway starts, authenticates to Zitadel via the freshly minted JWT key,
 
 ## 6. Phase checkboxes
 
-- [ ] Phase A — `libs/zitadel-rest-client` scaffolding + auth + error taxonomy
-- [ ] Phase A.2 — Domain endpoints (20 methods)
-- [ ] Phase B — `EnsureOp` trait + driver
-- [ ] Phase C — Concrete ensure-ops (project → api-app → SA → roles)
+- [x] Phase A — `libs/zitadel-rest-client` scaffolding + auth + error taxonomy
+- [x] Phase A.2 — Domain endpoints (20 methods)
+- [x] Phase B — `EnsureOp` trait + driver
+- [x] Phase C — Concrete ensure-ops (project → api-app → SA → roles)
 - [ ] Phase D — Sink layer + `.gitignore` patch
 - [ ] Phase E — `seed apply`
 - [ ] Phase F — `diff` subcommand

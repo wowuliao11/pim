@@ -37,6 +37,9 @@ tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+# Timestamps for JWT key expiration (ADR-0017 §Service account).
+chrono = { workspace = true }
+
 [dev-dependencies]
 # EnsureOp driver tests run against a real ZitadelClient pointed at a
 # wiremock server, per plan 001 Phase B acceptance (no MockZitadelClient

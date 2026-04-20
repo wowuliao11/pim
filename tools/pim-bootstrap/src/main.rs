@@ -10,6 +10,9 @@ use clap::Parser;
 use pim_bootstrap::cli::{Cli, Command, EnvFlag};
 use pim_bootstrap::config::{BootstrapConfig, Environment, SeedConfig};
 use pim_bootstrap::ensure::{run_pipeline, DynEnsureOp, Flags, Mode};
+use pim_bootstrap::ops::{
+    new_shared_context, ApiAppEnsureOp, ProjectEnsureOp, ProjectRolesEnsureOp, ServiceAccountEnsureOp,
+};
 use tracing::{info, warn};
 use zitadel_rest_client::{AdminCredential, ZitadelClient};
 
@@ -61,18 +64,18 @@ async fn main() -> anyhow::Result<()> {
                 rotate_keys: *rotate_keys,
             };
 
-            // Phase B: pipeline scaffold with no concrete ops yet. Phase C wires
-            // ProjectEnsureOp / ApiAppEnsureOp / ServiceAccountEnsureOp /
-            // ProjectRolesEnsureOp into this vec.
-            let ops: Vec<Box<dyn DynEnsureOp>> = Vec::new();
-
-            if ops.is_empty() {
-                warn!(
-                    "no ensure-ops registered yet — Phase B ships the pipeline scaffold only; \
-                     concrete ops land in Phase C"
-                );
-                return Ok(());
-            }
+            // Phase C: concrete ensure-ops, wired in the order defined by ADR-0017
+            // §Pipeline (project → api-app → service-account → roles). Each op
+            // receives a clone of the shared context so later ops can read ids
+            // produced by earlier ones (e.g. `project_id`, `sa_user_id`,
+            // `jwt_key_blob`).
+            let shared_ctx = new_shared_context();
+            let ops: Vec<Box<dyn DynEnsureOp>> = vec![
+                Box::new(ProjectEnsureOp::new(&cfg.project, shared_ctx.clone())),
+                Box::new(ApiAppEnsureOp::new(&cfg.api_app, shared_ctx.clone())),
+                Box::new(ServiceAccountEnsureOp::new(&cfg.service_account, shared_ctx.clone())),
+                Box::new(ProjectRolesEnsureOp::new(&cfg.roles, shared_ctx.clone())),
+            ];
 
             let client = build_zitadel_client(&cfg)?;
             let result = run_pipeline(&ops, mode, flags, &client).await;
