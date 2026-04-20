@@ -17,7 +17,12 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 set dotenv-load := false
 
 # Compose CLI. Override with `COMPOSE=docker\ compose just dev-up` if needed.
-compose := env_var_or_default("COMPOSE", "podman compose")
+# `--env-file .env.local` is required because podman-compose (and docker compose
+# by default) only auto-load `.env`, not `.env.local`. Without it, compose.yml's
+# `${ZITADEL_MASTERKEY:?...}` assertion fires even when the value is present in
+# `.env.local`. See justfile recipes: they `source .env.local` in the shell,
+# but that does not propagate into the compose subprocess.
+compose := env_var_or_default("COMPOSE", "podman compose --env-file .env.local")
 
 # Named volume where Zitadel FirstInstance drops the admin PAT (see
 # bootstrap/steps.yaml PatPath). compose.yml declares this as a top-level
@@ -80,21 +85,30 @@ dev-up:
     {{compose}} up -d postgres zitadel-api
 
     # Wait for zitadel-api to be healthy before trying to pull the PAT.
+    # The Zitadel image is distroless (no shell, test, cat, ls). We cannot
+    # probe the file via `{{compose}} exec`; instead we read it from the
+    # host-side mountpoint of the named volume `{{volume}}`. `podman volume
+    # export` streams a tar of the volume contents, which works regardless
+    # of container runtime state and does not require sudo/root access to
+    # the raw mountpoint.
     echo "→ waiting for zitadel-api to mint admin PAT (up to 120s)"
     deadline=$(( $(date +%s) + 120 ))
+    pat=""
     while : ; do
-        if {{compose}} exec -T zitadel-api test -s /zitadel/bootstrap/pim-admin.pat 2>/dev/null; then
+        pat=$(podman volume export {{volume}} 2>/dev/null \
+              | tar -xO pim-admin.pat 2>/dev/null \
+              | tr -d '\r\n' || true)
+        if [ -n "$pat" ]; then
             break
         fi
         if [ "$(date +%s)" -gt "$deadline" ]; then
-            echo "!! timed out waiting for /zitadel/bootstrap/pim-admin.pat" >&2
+            echo "!! timed out waiting for pim-admin.pat in volume {{volume}}" >&2
             echo "   inspect: {{compose}} logs zitadel-api" >&2
             exit 1
         fi
         sleep 2
     done
 
-    pat=$({{compose}} exec -T zitadel-api cat /zitadel/bootstrap/pim-admin.pat | tr -d '\r\n')
     if [ -z "$pat" ]; then
         echo "!! admin PAT is empty" >&2
         exit 1

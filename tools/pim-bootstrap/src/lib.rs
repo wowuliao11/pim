@@ -12,3 +12,6 @@
 
 pub mod cli;
 pub mod config;
+pub mod ensure;
+pub mod ops;
+pub mod sinks;

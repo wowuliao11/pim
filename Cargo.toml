@@ -51,3 +51,5 @@ clap = { version = "4", features = ["derive", "env"] }
 # Utilities
 uuid = { version = "1.20", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+tempfile = "3"

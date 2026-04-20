@@ -9,7 +9,13 @@
 use clap::Parser;
 use pim_bootstrap::cli::{Cli, Command, EnvFlag};
 use pim_bootstrap::config::{BootstrapConfig, Environment, SeedConfig};
+use pim_bootstrap::ensure::{run_pipeline, DynEnsureOp, Flags, Mode};
+use pim_bootstrap::ops::{
+    new_shared_context, ApiAppEnsureOp, ProjectEnsureOp, ProjectRolesEnsureOp, ServiceAccountEnsureOp, SharedContext,
+};
+use pim_bootstrap::sinks;
 use tracing::{info, warn};
+use zitadel_rest_client::{AdminCredential, ZitadelClient};
 
 fn init_tracing() {
     use tracing_subscriber::EnvFilter;
@@ -50,11 +56,42 @@ async fn main() -> anyhow::Result<()> {
             );
 
             if *dry_run {
-                info!("dry-run: no Zitadel calls made");
-                return Ok(());
+                info!("dry-run: running pipeline in Plan mode (no writes)");
             }
 
-            warn!("bootstrap apply is not implemented yet (Phase 3)");
+            let mode = if *dry_run { Mode::Plan } else { Mode::Apply };
+            let flags = Flags {
+                sync: *sync,
+                rotate_keys: *rotate_keys,
+            };
+
+            // Phase C: concrete ensure-ops, wired in the order defined by ADR-0017
+            // §Pipeline (project → api-app → service-account → roles). Each op
+            // receives a clone of the shared context so later ops can read ids
+            // produced by earlier ones (e.g. `project_id`, `sa_user_id`,
+            // `jwt_key_blob`).
+            let shared_ctx = new_shared_context();
+            let ops: Vec<Box<dyn DynEnsureOp>> = vec![
+                Box::new(ProjectEnsureOp::new(&cfg.project, shared_ctx.clone())),
+                Box::new(ApiAppEnsureOp::new(&cfg.api_app, shared_ctx.clone())),
+                Box::new(ServiceAccountEnsureOp::new(&cfg.service_account, shared_ctx.clone())),
+                Box::new(ProjectRolesEnsureOp::new(&cfg.roles, shared_ctx.clone())),
+            ];
+
+            let client = build_zitadel_client(&cfg)?;
+            let result = run_pipeline(&ops, mode, flags, &client).await;
+            print_report(&result.report);
+            if let Some(err) = result.error {
+                return Err(err.into());
+            }
+
+            // Phase D: persist pipeline outputs to the configured sinks.
+            // Skipped in Plan mode so `--dry-run` stays read-only. On Apply,
+            // we write the JWT key (if one was rotated/created), refresh
+            // per-service `config.toml`s, and upsert env-file entries.
+            if matches!(mode, Mode::Apply) {
+                run_sinks(&cfg, &shared_ctx, *rotate_keys, *sync)?;
+            }
         }
 
         Command::Seed { config, dry_run, env } => {
@@ -120,4 +157,115 @@ fn resolve_env(config_env: Environment, cli_env: Option<EnvFlag>) -> Environment
         Some(EnvFlag::Prod) => Environment::Prod,
         None => config_env,
     }
+}
+
+fn build_zitadel_client(cfg: &BootstrapConfig) -> anyhow::Result<ZitadelClient> {
+    use pim_bootstrap::config::AdminAuthMode;
+
+    let credential = match cfg.zitadel.admin_auth {
+        AdminAuthMode::Pat => {
+            let env_var = cfg
+                .zitadel
+                .admin_pat_env_var
+                .as_deref()
+                .ok_or_else(|| anyhow::anyhow!("admin_auth = \"pat\" requires admin_pat_env_var in config"))?;
+            AdminCredential::from_env_pat(env_var)?
+        }
+        AdminAuthMode::JwtProfile => {
+            let path = cfg
+                .zitadel
+                .admin_key_file
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("admin_auth = \"jwt_profile\" requires admin_key_file in config"))?;
+            AdminCredential::from_jwt_key_path(path, &cfg.zitadel.authority)?
+        }
+    };
+
+    Ok(ZitadelClient::new(&cfg.zitadel.authority, credential)?)
+}
+
+fn print_report(report: &pim_bootstrap::ensure::PipelineReport) {
+    info!(
+        rows = report.rows.len(),
+        drift_detected = report.drift_detected,
+        "pipeline complete",
+    );
+    for row in &report.rows {
+        info!(
+            op = row.op_name,
+            state = %row.state,
+            outcome = ?row.outcome,
+            elapsed_ms = row.duration.as_millis() as u64,
+            "ensure-op result",
+        );
+    }
+}
+
+/// Persist pipeline outputs (Phase D). Runs only in Apply mode. Reads the
+/// IDs/blob stashed by ensure-ops from `shared_ctx` and dispatches to the
+/// three sinks. Empty env-file entries are expected in dev (PATs arrive
+/// out-of-band); the call is still made so the sink can short-circuit.
+fn run_sinks(cfg: &BootstrapConfig, shared_ctx: &SharedContext, rotate_keys: bool, sync: bool) -> anyhow::Result<()> {
+    let (project_id, api_app_id, sa_user_id, jwt_key_blob) = {
+        let ctx = shared_ctx
+            .lock()
+            .map_err(|_| anyhow::anyhow!("pipeline context mutex poisoned"))?;
+        (
+            ctx.project_id.clone(),
+            ctx.api_app_id.clone(),
+            ctx.sa_user_id.clone(),
+            ctx.jwt_key_blob.clone(),
+        )
+    };
+
+    let project_id = project_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: project_id missing; pipeline did not reach ProjectEnsureOp"))?;
+    let api_app_id = api_app_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: api_app_id missing; pipeline did not reach ApiAppEnsureOp"))?;
+    let sa_user_id = sa_user_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: sa_user_id missing; pipeline did not reach ServiceAccountEnsureOp"))?;
+
+    let jwt_outcome = sinks::jwt_key::write(jwt_key_blob.as_deref(), &cfg.outputs.jwt_key_path, rotate_keys)?;
+    match &jwt_outcome {
+        sinks::jwt_key::JwtKeyOutcome::Written(p) => {
+            info!(path = %p.display(), "wrote jwt key");
+        }
+        sinks::jwt_key::JwtKeyOutcome::Stdout(tag) => {
+            info!(tag = %tag, "emitted jwt key to stdout sentinel");
+        }
+        sinks::jwt_key::JwtKeyOutcome::Skipped => {
+            info!("jwt key sink skipped (no blob staged this run)");
+        }
+    }
+
+    let inputs = sinks::service_config::ServiceConfigInputs {
+        authority: &cfg.zitadel.authority,
+        project_id: &project_id,
+        api_app_id: &api_app_id,
+        sa_user_id: &sa_user_id,
+        jwt_key_path: &cfg.outputs.jwt_key_path,
+    };
+    let touched = sinks::service_config::render_all(&cfg.outputs.service_configs, &inputs)?;
+    for label in &touched {
+        info!(target = %label, "wrote service config");
+    }
+
+    // Dev runs emit zero env entries — PATs are sourced out-of-band via
+    // `docker compose exec zitadel zitadel-cli ...`. Prod runs will pass
+    // real pairs once SECRET-1..N are defined (plan 001 §Phase E/F).
+    let env_entries: Vec<(&str, &str)> = Vec::new();
+    let env_outcome = sinks::env_file::upsert(&env_entries, &cfg.outputs.env_file_path, sync)?;
+    match env_outcome {
+        sinks::env_file::EnvFileOutcome::Written { path, changed } => {
+            info!(path = %path.display(), changed, "upserted env file");
+        }
+        sinks::env_file::EnvFileOutcome::Stdout(tag) => {
+            info!(tag = %tag, "emitted env entries to stdout sentinel");
+        }
+        sinks::env_file::EnvFileOutcome::NoEntries => {
+            info!("env file sink skipped (no entries to write)");
+        }
+    }
+
+    Ok(())
 }
