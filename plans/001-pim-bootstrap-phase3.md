@@ -292,7 +292,7 @@ and the gateway starts, authenticates to Zitadel via the freshly minted JWT key,
 - [x] Phase A.2 — Domain endpoints (20 methods)
 - [x] Phase B — `EnsureOp` trait + driver
 - [x] Phase C — Concrete ensure-ops (project → api-app → SA → roles)
-- [ ] Phase D — Sink layer + `.gitignore` patch
+- [x] Phase D — Sink layer + `.gitignore` patch
 - [ ] Phase E — `seed apply`
 - [ ] Phase F — `diff` subcommand
 - [ ] Phase G — Smoke test + docs

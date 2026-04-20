@@ -11,8 +11,9 @@ use pim_bootstrap::cli::{Cli, Command, EnvFlag};
 use pim_bootstrap::config::{BootstrapConfig, Environment, SeedConfig};
 use pim_bootstrap::ensure::{run_pipeline, DynEnsureOp, Flags, Mode};
 use pim_bootstrap::ops::{
-    new_shared_context, ApiAppEnsureOp, ProjectEnsureOp, ProjectRolesEnsureOp, ServiceAccountEnsureOp,
+    new_shared_context, ApiAppEnsureOp, ProjectEnsureOp, ProjectRolesEnsureOp, ServiceAccountEnsureOp, SharedContext,
 };
+use pim_bootstrap::sinks;
 use tracing::{info, warn};
 use zitadel_rest_client::{AdminCredential, ZitadelClient};
 
@@ -82,6 +83,14 @@ async fn main() -> anyhow::Result<()> {
             print_report(&result.report);
             if let Some(err) = result.error {
                 return Err(err.into());
+            }
+
+            // Phase D: persist pipeline outputs to the configured sinks.
+            // Skipped in Plan mode so `--dry-run` stays read-only. On Apply,
+            // we write the JWT key (if one was rotated/created), refresh
+            // per-service `config.toml`s, and upsert env-file entries.
+            if matches!(mode, Mode::Apply) {
+                run_sinks(&cfg, &shared_ctx, *rotate_keys, *sync)?;
             }
         }
 
@@ -190,4 +199,73 @@ fn print_report(report: &pim_bootstrap::ensure::PipelineReport) {
             "ensure-op result",
         );
     }
+}
+
+/// Persist pipeline outputs (Phase D). Runs only in Apply mode. Reads the
+/// IDs/blob stashed by ensure-ops from `shared_ctx` and dispatches to the
+/// three sinks. Empty env-file entries are expected in dev (PATs arrive
+/// out-of-band); the call is still made so the sink can short-circuit.
+fn run_sinks(cfg: &BootstrapConfig, shared_ctx: &SharedContext, rotate_keys: bool, sync: bool) -> anyhow::Result<()> {
+    let (project_id, api_app_id, sa_user_id, jwt_key_blob) = {
+        let ctx = shared_ctx
+            .lock()
+            .map_err(|_| anyhow::anyhow!("pipeline context mutex poisoned"))?;
+        (
+            ctx.project_id.clone(),
+            ctx.api_app_id.clone(),
+            ctx.sa_user_id.clone(),
+            ctx.jwt_key_blob.clone(),
+        )
+    };
+
+    let project_id = project_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: project_id missing; pipeline did not reach ProjectEnsureOp"))?;
+    let api_app_id = api_app_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: api_app_id missing; pipeline did not reach ApiAppEnsureOp"))?;
+    let sa_user_id = sa_user_id
+        .ok_or_else(|| anyhow::anyhow!("sinks: sa_user_id missing; pipeline did not reach ServiceAccountEnsureOp"))?;
+
+    let jwt_outcome = sinks::jwt_key::write(jwt_key_blob.as_deref(), &cfg.outputs.jwt_key_path, rotate_keys)?;
+    match &jwt_outcome {
+        sinks::jwt_key::JwtKeyOutcome::Written(p) => {
+            info!(path = %p.display(), "wrote jwt key");
+        }
+        sinks::jwt_key::JwtKeyOutcome::Stdout(tag) => {
+            info!(tag = %tag, "emitted jwt key to stdout sentinel");
+        }
+        sinks::jwt_key::JwtKeyOutcome::Skipped => {
+            info!("jwt key sink skipped (no blob staged this run)");
+        }
+    }
+
+    let inputs = sinks::service_config::ServiceConfigInputs {
+        authority: &cfg.zitadel.authority,
+        project_id: &project_id,
+        api_app_id: &api_app_id,
+        sa_user_id: &sa_user_id,
+        jwt_key_path: &cfg.outputs.jwt_key_path,
+    };
+    let touched = sinks::service_config::render_all(&cfg.outputs.service_configs, &inputs)?;
+    for label in &touched {
+        info!(target = %label, "wrote service config");
+    }
+
+    // Dev runs emit zero env entries — PATs are sourced out-of-band via
+    // `docker compose exec zitadel zitadel-cli ...`. Prod runs will pass
+    // real pairs once SECRET-1..N are defined (plan 001 §Phase E/F).
+    let env_entries: Vec<(&str, &str)> = Vec::new();
+    let env_outcome = sinks::env_file::upsert(&env_entries, &cfg.outputs.env_file_path, sync)?;
+    match env_outcome {
+        sinks::env_file::EnvFileOutcome::Written { path, changed } => {
+            info!(path = %path.display(), changed, "upserted env file");
+        }
+        sinks::env_file::EnvFileOutcome::Stdout(tag) => {
+            info!(tag = %tag, "emitted env entries to stdout sentinel");
+        }
+        sinks::env_file::EnvFileOutcome::NoEntries => {
+            info!("env file sink skipped (no entries to write)");
+        }
+    }
+
+    Ok(())
 }
